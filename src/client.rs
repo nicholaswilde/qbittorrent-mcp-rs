@@ -498,4 +498,29 @@ impl QBitClient {
             Err(anyhow!("Failed to get RSS rules: {}", resp.status()))
         }
     }
+
+    pub async fn get_app_preferences(&self) -> Result<serde_json::Value> {
+        let url = format!("{}/api/v2/app/preferences", self.base_url);
+        let resp = self.http.get(&url).send().await?;
+
+        if resp.status().is_success() {
+            let prefs = resp.json().await?;
+            Ok(prefs)
+        } else {
+            Err(anyhow!("Failed to get app preferences: {}", resp.status()))
+        }
+    }
+
+    pub async fn set_app_preferences(&self, prefs: &serde_json::Value) -> Result<()> {
+        let url = format!("{}/api/v2/app/setPreferences", self.base_url);
+        let params = [("json", prefs.to_string())];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to set app preferences: {}", resp.status()))
+        }
+    }
 }

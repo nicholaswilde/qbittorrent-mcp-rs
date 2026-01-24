@@ -125,6 +125,8 @@ The server exposes the following tools to the LLM, categorized by functionality:
 ### Global Control
 - `get_global_transfer_info`: Get global download/upload speeds, data usage, and limits.
 - `set_global_transfer_limits`: Set global download and/or upload speed limits (in bytes per second).
+- `get_app_preferences`: Retrieve all application preferences (full configuration).
+- `set_app_preferences`: Update application preferences using a JSON string.
 
 ### Categories & Tags
 - `create_category`: Create a new category with a save path.

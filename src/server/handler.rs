@@ -348,6 +348,28 @@ impl ServerHandler for AppHandler {
                         annotations: None,
                     };
 
+                    let get_app_prefs_tool = Tool {
+                        name: "get_app_preferences".to_string(),
+                        description: "Get all application preferences".to_string(),
+                        input_schema: Some(ToolSchema {
+                            properties: Some(json!({})),
+                            required: None,
+                        }),
+                        annotations: None,
+                    };
+
+                    let set_app_prefs_tool = Tool {
+                        name: "set_app_preferences".to_string(),
+                        description: "Set one or more application preferences".to_string(),
+                        input_schema: Some(ToolSchema {
+                            properties: Some(json!({
+                                "preferences": { "type": "string", "description": "JSON string of preferences to update" }
+                            })),
+                            required: Some(vec!["preferences".to_string()]),
+                        }),
+                        annotations: None,
+                    };
+
                     tools.extend(vec![
                         search_tool,
                         add_tool,
@@ -372,6 +394,8 @@ impl ServerHandler for AppHandler {
                         set_rss_rule_tool,
                         get_rss_rules_tool,
                         wait_tool,
+                        get_app_prefs_tool,
+                        set_app_prefs_tool,
                     ]);
                 }
 
@@ -863,6 +887,43 @@ impl ServerHandler for AppHandler {
 
                     Ok(json!({
                         "content": [{ "type": "text", "text": text }],
+                        "isError": false
+                    }))
+                } else if name == "get_app_preferences" {
+                    let prefs =
+                        self.client.get_app_preferences().await.map_err(|e| {
+                            McpError::protocol(ErrorCode::InternalError, e.to_string())
+                        })?;
+                    let text = serde_json::to_string_pretty(&prefs)
+                        .map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+
+                    Ok(json!({
+                        "content": [{ "type": "text", "text": text }],
+                        "isError": false
+                    }))
+                } else if name == "set_app_preferences" {
+                    let args = arguments.ok_or(McpError::protocol(
+                        ErrorCode::InvalidParams,
+                        "Missing arguments",
+                    ))?;
+                    let prefs_str = args.get("preferences").and_then(|v| v.as_str()).ok_or(
+                        McpError::protocol(ErrorCode::InvalidParams, "Missing preferences"),
+                    )?;
+                    let prefs_val: serde_json::Value =
+                        serde_json::from_str(prefs_str).map_err(|e| {
+                            McpError::protocol(
+                                ErrorCode::InvalidParams,
+                                format!("Invalid JSON: {}", e),
+                            )
+                        })?;
+
+                    self.client
+                        .set_app_preferences(&prefs_val)
+                        .await
+                        .map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+
+                    Ok(json!({
+                        "content": [{ "type": "text", "text": "App preferences updated successfully" }],
                         "isError": false
                     }))
                 } else if name == "wait_for_torrent_status" {
