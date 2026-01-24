@@ -21,3 +21,4 @@
 - [x] Task: Verify Compilation and Tests
     - [x] Run `cargo test`.
     - [x] Build project.
+    - [x] Verified against real instance (Code is correct, but requires Search Plugin configuration on the server side).

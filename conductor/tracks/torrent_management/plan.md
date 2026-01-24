@@ -23,3 +23,4 @@
 - [x] Task: Verify Compilation and Tests
     - [x] Run `cargo test` to ensure all mocks pass.
     - [x] Run `cargo build` to ensure no compile errors.
+    - [x] Verified against real instance (List, Add, Pause, Resume, Delete confirmed working).

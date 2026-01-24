@@ -19,3 +19,4 @@
 - [x] Task: Verify Compilation and Tests
     - [x] Run `cargo test`.
     - [x] Build project.
+    - [x] Verified against real instance (`get_global_transfer_info` returns correct status).

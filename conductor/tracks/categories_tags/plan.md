@@ -24,3 +24,4 @@
 - [x] Task: Verify Compilation and Tests
     - [x] Run `cargo test`.
     - [x] Build project.
+    - [x] Verified against real instance (`create_category` and `get_categories` confirmed working).

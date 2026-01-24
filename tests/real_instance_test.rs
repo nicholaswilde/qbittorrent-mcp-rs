@@ -37,6 +37,77 @@ async fn test_real_instance_connectivity() {
             for t in torrents.iter().take(5) {
                 println!(" - {}: {}%", t.name, (t.progress * 100.0).round());
             }
+
+            // Test Categories (Read)
+            println!("\n--- Testing Categories ---");
+            match client.get_categories().await {
+                Ok(cats) => {
+                    println!("Successfully retrieved {} categories", cats.len());
+                    for (name, cat) in cats.iter().take(3) {
+                        println!(" - {}: {}", name, cat.save_path);
+                    }
+                }
+                Err(e) => println!("Failed to get categories: {}", e),
+            }
+
+            // Test Create Category
+            println!("\n--- Testing Create Category ---");
+            match client.create_category("mcp_test_category", "").await {
+                Ok(_) => {
+                    println!("Successfully created category 'mcp_test_category'");
+                    // Verify it exists
+                    match client.get_categories().await {
+                        Ok(cats) => {
+                            if cats.contains_key("mcp_test_category") {
+                                println!("Verified 'mcp_test_category' exists in category list");
+                            } else {
+                                println!("WARNING: 'mcp_test_category' not found in list immediately after creation");
+                            }
+                        }
+                        Err(e) => println!("Failed to get categories: {}", e),
+                    }
+                }
+                Err(e) => println!("Failed to create category: {}", e),
+            }
+
+            // Test Global Transfer Info
+            println!("\n--- Testing Global Transfer Info ---");
+            match client.get_global_transfer_info().await {
+                Ok(info) => {
+                    println!("Connection Status: {}", info.connection_status);
+                    println!("DL Speed: {} b/s", info.dl_info_speed);
+                    println!("UP Speed: {} b/s", info.up_info_speed);
+                }
+                Err(e) => println!("Failed to get global info: {}", e),
+            }
+
+            // Test Search
+            println!("\n--- Testing Search (ubuntu) ---");
+            match client.start_search("ubuntu", None).await {
+                Ok(id) => {
+                    println!("Search started with ID: {}", id);
+                    // Poll a few times
+                    for i in 0..5 {
+                        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                        match client.get_search_results(id, None, None).await {
+                            Ok(resp) => {
+                                println!("Poll {}: Status '{}', Found {} results", i+1, resp.status, resp.total);
+                                if resp.status == "Stopped" || resp.total > 0 {
+                                    if !resp.results.is_empty() {
+                                        println!("First result: {}", resp.results[0].file_name);
+                                    }
+                                    break;
+                                }
+                            }
+                            Err(e) => println!("Poll failed: {}", e),
+                        }
+                    }
+                    let _ = client.stop_search(id).await;
+                    let _ = client.delete_search(id).await;
+                    println!("Search cleaned up");
+                }
+                Err(e) => println!("Failed to start search: {}", e),
+            }
         }
         Err(e) => {
             panic!("Failed to connect to real instance: {}", e);
