@@ -14,34 +14,32 @@ pub struct AppConfig {
 impl AppConfig {
     pub fn load(file_path: Option<String>, cli_args: Vec<String>) -> Result<Self, ConfigError> {
         let mut builder = Config::builder();
+        let matches = parse_args(cli_args);
 
-        // 1. Set Defaults
+        // 1. Determine Config File Path
+        let path_to_load = if let Some(p) = file_path {
+            Some(p)
+        } else {
+            matches.get_one::<String>("config").cloned()
+        };
+
+        // 2. Set Defaults
         builder = builder
             .set_default("qbittorrent_host", "localhost")?
             .set_default("qbittorrent_port", 8080)?
             .set_default("server_mode", "stdio")?;
 
-        // 2. Load from File (if provided)
-        if let Some(path) = file_path {
+        // 3. Load from File
+        if let Some(path) = path_to_load {
             builder = builder.add_source(File::with_name(&path));
         } else {
-            // Try default locations? For now, explicit path or implicit "config"
             builder = builder.add_source(File::with_name("config").required(false));
         }
 
-        // 3. Load from Environment Variables
-        // QBITTORRENT_HOST, QBITTORRENT_PORT, etc.
+        // 4. Load from Environment Variables
         builder = builder.add_source(Environment::default().try_parsing(true));
 
-        // 4. Build to get intermediate config (to merge CLI overrides manually? or use a source?)
-
-        // We need to parse CLI args to get overrides.
-        // Since `cli_args` is passed as a Vec<String> (for testing), we should parse it.
-        // Use clap to parse `cli_args`.
-
-        let matches = parse_args(cli_args);
-
-        // Apply overrides
+        // 5. Apply CLI overrides
         if let Some(host) = matches.get_one::<String>("qbittorrent_host") {
             builder = builder.set_override("qbittorrent_host", host.as_str())?;
         }
@@ -51,6 +49,12 @@ impl AppConfig {
         if let Some(mode) = matches.get_one::<String>("server_mode") {
             builder = builder.set_override("server_mode", mode.as_str())?;
         }
+        if let Some(user) = matches.get_one::<String>("qbittorrent_username") {
+            builder = builder.set_override("qbittorrent_username", user.as_str())?;
+        }
+        if let Some(pass) = matches.get_one::<String>("qbittorrent_password") {
+            builder = builder.set_override("qbittorrent_password", pass.as_str())?;
+        }
 
         builder.build()?.try_deserialize()
     }
@@ -59,11 +63,13 @@ impl AppConfig {
 fn parse_args(args: Vec<String>) -> ArgMatches {
     use clap::{Arg, Command};
 
-    // If args is empty, it might mean "no args passed" (except binary name usually).
-    // In our test, we pass "app", "flag".
-    // If we call this from main, we might pass env::args().
-
     let cmd = Command::new("qbittorrent-mcp-rs")
+        .arg(
+            Arg::new("config")
+                .short('c')
+                .long("config")
+                .help("Path to configuration file"),
+        )
         .arg(
             Arg::new("qbittorrent_host")
                 .long("qbittorrent-host")
