@@ -1,0 +1,138 @@
+---
+version: '3'
+
+vars:
+  LOCAL_IP:
+    sh: hostname -I | awk '{print $1}'
+
+tasks:
+  clippy:
+    desc: Run cargo clippy
+    cmds:
+      - cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+  default:
+    cmds:
+      - task -l
+  deps:
+    desc: Install dependencies
+    cmds:
+      - cargo install cross --git https://github.com/cross-rs/cross
+
+  build:
+    desc: Build the project for all supported architectures (requires cross)
+    cmds:
+      - task: build:amd64
+      - task: build:arm64
+      - task: build:armv7
+      - task: build:armv6
+
+  build:amd64:
+    desc: Build for AMD64 (x86_64)
+    cmds:
+      - cross build --release --target x86_64-unknown-linux-gnu
+
+  build:arm64:
+    desc: Build for ARM64 (aarch64)
+    cmds:
+      - cross build --release --target aarch64-unknown-linux-gnu
+
+  build:armv7:
+    desc: Build for ARMv7
+    cmds:
+      - cross build --release --target armv7-unknown-linux-gnueabihf
+
+  build:armv6:
+    desc: Build for ARMv6
+    cmds:
+      - cross build --release --target arm-unknown-linux-gnueabihf
+
+  build:local:
+    desc: Build the project in release mode for the current architecture
+    cmds:
+      - cargo build --release
+
+  build:debug:
+    desc: Build the project in debug mode
+    cmds:
+      - cargo build
+
+  build:ci:
+    desc: Build using the CI profile (non-incremental)
+    cmds:
+      - cargo build --profile ci
+
+  build:release-profile:
+    desc: Build using the release profile explicitly
+    cmds:
+      - cargo build --profile release
+
+  run:
+    desc: Run the project (requires arguments or env vars, runs help by default)
+    cmds:
+      - cargo run -- --help
+
+  inspector:
+    desc: Run the MCP Inspector against the debug build
+    deps: [build:debug]
+    env:
+      HOST: '{{.HOST | default .LOCAL_IP}}'
+      ALLOWED_ORIGINS: '{{.ALLOWED_ORIGINS | default (printf "http://%s:6274" .LOCAL_IP)}}'
+    cmds:
+      - npx @modelcontextprotocol/inspector -- ./target/debug/proxmox-mcp-rs --config config.toml
+
+  check:
+    desc: Check code for errors without generating binary
+    cmds:
+      - cargo check
+
+  test:
+    desc: Run all tests (fmt, lint, and unit tests)
+    cmds:
+      - task: fmt:check
+      - task: lint
+      - cargo test
+      - task: clippy
+
+  test:ci:
+    desc: Run tests using the CI profile
+    cmds:
+      - task: fmt:check
+      - task: lint
+      - cargo test --profile ci
+      - task: clippy
+
+  fmt:
+    desc: Format code with rustfmt
+    cmds:
+      - cargo fmt --all
+
+  fmt:check:
+    desc: Check code formatting with rustfmt
+    cmds:
+      - cargo fmt -- --check
+
+  lint:
+    desc: Lint code with clippy
+    cmds:
+      - cargo clippy -- -D warnings
+
+  docker:build:
+    desc: Build the Docker image for multiple architectures (amd64, arm64)
+    cmds:
+      - docker buildx build --platform linux/amd64,linux/arm64 -t proxmox-mcp-rs .
+
+  docker:run:
+    desc: Run the Docker image (requires env vars or config file mounted)
+    cmds:
+      - docker run --rm -it proxmox-mcp-rs --help
+
+  docker:load:
+    desc: Build and load the Docker image into the local daemon (single arch)
+    cmds:
+      - docker buildx build --load -t proxmox-mcp-rs .
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - cargo clean

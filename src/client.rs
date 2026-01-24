@@ -80,4 +80,73 @@ impl QBitClient {
             Err(anyhow!("Failed to get torrent list: {}", resp.status()))
         }
     }
+
+    pub async fn add_torrent(
+        &self,
+        urls: &str,
+        save_path: Option<&str>,
+        category: Option<&str>,
+    ) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/add", self.base_url);
+
+        let mut form = reqwest::multipart::Form::new().text("urls", urls.to_string());
+
+        if let Some(path) = save_path {
+            form = form.text("savepath", path.to_string());
+        }
+
+        if let Some(cat) = category {
+            form = form.text("category", cat.to_string());
+        }
+
+        let resp = self.http.post(&url).multipart(form).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to add torrent: {}", resp.status()))
+        }
+    }
+
+    pub async fn pause_torrents(&self, hashes: &str) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/pause", self.base_url);
+        let params = [("hashes", hashes)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to pause torrents: {}", resp.status()))
+        }
+    }
+
+    pub async fn resume_torrents(&self, hashes: &str) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/resume", self.base_url);
+        let params = [("hashes", hashes)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to resume torrents: {}", resp.status()))
+        }
+    }
+
+    pub async fn delete_torrents(&self, hashes: &str, delete_files: bool) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/delete", self.base_url);
+        let params = [
+            ("hashes", hashes.to_string()),
+            ("deleteFiles", delete_files.to_string()),
+        ];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to delete torrents: {}", resp.status()))
+        }
+    }
 }

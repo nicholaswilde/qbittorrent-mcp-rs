@@ -1,0 +1,7 @@
+{
+    "id": "torrent_management",
+    "name": "Torrent Management",
+    "description": "Implement core torrent management features (add, pause, resume, delete).",
+    "status": "active",
+    "created_at": "2026-01-23"
+}

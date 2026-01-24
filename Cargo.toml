@@ -10,7 +10,7 @@ axum = "0.8.8"
 clap = { version = "4.5.54", features = ["derive"] }
 config = "0.15.19"
 mcp-sdk-rs = "0.3.4"
-reqwest = { version = "0.13.1", features = ["cookies", "form", "json"] }
+reqwest = { version = "0.13.1", features = ["cookies", "form", "json", "multipart"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 tokio = { version = "1.49.0", features = ["full"] }
@@ -22,5 +22,16 @@ tracing-subscriber = "0.3.22"
 tempfile = "3.24.0"
 wiremock = "0.6.5"
 
+# Profile for CI/CD builds (inherits from dev)
 [profile.ci]
-inherits = "test"
+inherits = "dev"
+incremental = false     # Disable incremental compilation for CI (often slower/buggy in CI cache)
+debug = 0               # No debug info needed for basic CI checks (speeds up build)
+
+# Profile for final production releases (smaller, faster)
+[profile.release]
+opt-level = "z"         # Optimize for size
+lto = true              # Link Time Optimization (smaller binary)
+codegen-units = 1       # Reduce parallel code generation for better optimization
+panic = "abort"         # Remove stack unwinding (smaller binary)
+strip = true            # Strip symbols (smaller binary)

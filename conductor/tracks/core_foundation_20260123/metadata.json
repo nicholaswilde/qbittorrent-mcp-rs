@@ -1,8 +1,0 @@
-{
-"track_id": "core_foundation_20260123",
-"type": "feature",
-"status": "new",
-"created_at": "2026-01-23T00:00:00Z",
-"updated_at": "2026-01-23T00:00:00Z",
-"description": "Build the core MCP server foundation with basic qBittorrent connectivity and a 'list torrents' tool."
-}
