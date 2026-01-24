@@ -28,21 +28,21 @@
     - [x] Verify Tests Pass
 - [x] Task: Conductor - User Manual Verification 'qBittorrent Client (Internal API)' (Protocol in workflow.md)
 
-## Phase 3: MCP Server Integration (Dual Mode)
+## Phase 3: MCP Server Integration (Dual Mode) [checkpoint: edbf6a9]
 
-- [ ] Task: Set up MCP Server Structure & CLI Args
-    - [ ] Implement `clap` arguments to select between `stdio` and `http` modes (and specify config path)
-    - [ ] Create basic server traits/structs to abstract the transport layer
-- [ ] Task: Implement Stdio Transport
-    - [ ] Integrate `mcp_sdk_rs` (or equivalent) for stdio
-    - [ ] Write test/verification script
-- [ ] Task: Implement HTTP Transport
-    - [ ] Set up `axum` router for MCP (SSE endpoint, POST endpoint)
-    - [ ] Write test/verification script
-- [ ] Task: Register `list_torrents` Tool
-    - [ ] Implement the `Tool` trait/interface for `list_torrents`
-    - [ ] Connect the tool execution to `QBitClient::get_torrent_list`
-    - [ ] Verify tool availability in both transports
-- [ ] Task: Update README
-    - [ ] Create/Update `README.md` with installation, configuration (file formats), and usage instructions (stdio vs http)
-- [ ] Task: Conductor - User Manual Verification 'MCP Server Integration' (Protocol in workflow.md)
+- [x] Task: Set up MCP Server Structure & CLI Args
+    - [x] Implement `clap` arguments to select between `stdio` and `http` modes (and specify config path)
+    - [x] Create basic server traits/structs to abstract the transport layer
+- [x] Task: Implement Stdio Transport
+    - [x] Integrate `mcp_sdk_rs` (or equivalent) for stdio
+    - [x] Write test/verification script
+- [x] Task: Implement HTTP Transport
+    - [x] Set up `axum` router for MCP (SSE endpoint, POST endpoint)
+    - [x] Write test/verification script
+- [x] Task: Register `list_torrents` Tool
+    - [x] Implement the `Tool` trait/interface for `list_torrents`
+    - [x] Connect the tool execution to `QBitClient::get_torrent_list`
+    - [x] Verify tool availability in both transports
+- [x] Task: Update README
+    - [x] Create/Update `README.md` with installation, configuration (file formats), and usage instructions (stdio vs http)
+- [x] Task: Conductor - User Manual Verification 'MCP Server Integration' (Protocol in workflow.md)
