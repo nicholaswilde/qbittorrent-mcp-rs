@@ -41,6 +41,7 @@ qbittorrent_port = 8080
 qbittorrent_username = "admin"
 qbittorrent_password = "password"
 server_mode = "stdio" # or "http"
+lazy_mode = false # or true to hide complex tools initially
 ```
 
 ### CLI Arguments
@@ -57,6 +58,7 @@ CLI arguments override configuration file settings.
 - `--qbittorrent-username <user>`: Username.
 - `--qbittorrent-password <pass>`: Password.
 - `--server-mode <mode>`: `stdio` or `http`.
+- `--lazy`: Enable lazy mode (shows only essential tools initially to save tokens).
 
 ## Usage
 
@@ -94,17 +96,25 @@ Server will listen on port 3000.
 
 ## Available Tools
 
-The server exposes the following tools to the LLM:
+The server exposes the following tools to the LLM, categorized by functionality:
 
-- `list_torrents`: List all torrents.
-- `add_torrent`: Add a new torrent (url, save_path, category).
-- `pause_torrent`: Pause a torrent (hash).
-- `resume_torrent`: Resume a torrent (hash).
-- `delete_torrent`: Delete a torrent (hash, delete_files).
-- `get_torrent_files`: List files inside a torrent (hash).
-- `get_torrent_properties`: Get detailed properties of a torrent (hash).
-- `get_global_transfer_info`: Get global speed and limits.
-- `set_global_transfer_limits`: Set global download/upload limits.
+### Torrent Management
+- `list_torrents`: List all torrents with their status and progress.
+- `add_torrent`: Add a new torrent via Magnet URI or HTTP URL.
+- `pause_torrent`: Pause one or more torrents (use `|` to separate multiple hashes).
+- `resume_torrent`: Resume one or more torrents (use `|` to separate multiple hashes).
+- `delete_torrent`: Delete one or more torrents, optionally deleting downloaded files.
+
+### Torrent Inspection
+- `get_torrent_files`: List all files inside a specific torrent.
+- `get_torrent_properties`: Get detailed technical properties of a torrent (save path, seeds, peers, etc.).
+
+### Global Control
+- `get_global_transfer_info`: Get global download/upload speeds, data usage, and limits.
+- `set_global_transfer_limits`: Set global download and/or upload speed limits (in bytes per second).
+
+### System Tools
+- `show_all_tools`: Enable all available tools when running in `--lazy` mode.
 
 ## License
 
