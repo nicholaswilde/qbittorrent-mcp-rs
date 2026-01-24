@@ -11,22 +11,18 @@ use tokio::sync::mpsc;
 
 pub struct StdioServer {
     client: QBitClient,
+    lazy_mode: bool,
 }
 
 impl Default for StdioServer {
     fn default() -> Self {
-        // This default is problematic if we need a client.
-        // But Default was added for clippy.
-        // Ideally we don't impl Default if we require args.
-        // I'll remove Default and fix clippy if needed by suppressing or using new.
-        // Or create a dummy client? No.
         panic!("StdioServer requires a client");
     }
 }
 
 impl StdioServer {
-    pub fn new(client: QBitClient) -> Self {
-        Self { client }
+    pub fn new(client: QBitClient, lazy_mode: bool) -> Self {
+        Self { client, lazy_mode }
     }
 }
 
@@ -58,7 +54,7 @@ impl MCPServer for StdioServer {
         });
 
         let transport = Arc::new(StdioTransport::new(read_rx, write_tx));
-        let handler = Arc::new(AppHandler::new(self.client.clone()));
+        let handler = Arc::new(AppHandler::new(self.client.clone(), self.lazy_mode));
         let server = Server::new(transport, handler);
 
         server.start().await.map_err(|e| anyhow::anyhow!(e))

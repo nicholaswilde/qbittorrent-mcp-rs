@@ -6,14 +6,19 @@ use mcp_sdk_rs::error::ErrorCode;
 use mcp_sdk_rs::server::ServerHandler;
 use mcp_sdk_rs::types::{ClientCapabilities, Implementation, ServerCapabilities, Tool, ToolSchema};
 use serde_json::{Value, json};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 pub struct AppHandler {
     client: QBitClient,
+    lazy_mode: AtomicBool,
 }
 
 impl AppHandler {
-    pub fn new(client: QBitClient) -> Self {
-        Self { client }
+    pub fn new(client: QBitClient, lazy_mode: bool) -> Self {
+        Self {
+            client,
+            lazy_mode: AtomicBool::new(lazy_mode),
+        }
     }
 }
 
@@ -35,6 +40,8 @@ impl ServerHandler for AppHandler {
     async fn handle_method(&self, method: &str, params: Option<Value>) -> Result<Value, McpError> {
         match method {
             "tools/list" => {
+                let is_lazy = self.lazy_mode.load(Ordering::Relaxed);
+
                 let list_tool = Tool {
                     name: "list_torrents".to_string(),
                     description: "List all torrents".to_string(),
@@ -45,84 +52,9 @@ impl ServerHandler for AppHandler {
                     annotations: None,
                 };
 
-                let add_tool = Tool {
-                    name: "add_torrent".to_string(),
-                    description: "Add a new torrent".to_string(),
-                    input_schema: Some(ToolSchema {
-                        properties: Some(json!({
-                            "url": { "type": "string", "description": "Magnet URI or HTTP URL" },
-                            "save_path": { "type": "string", "description": "Optional save path" },
-                            "category": { "type": "string", "description": "Optional category" }
-                        })),
-                        required: Some(vec!["url".to_string()]),
-                    }),
-                    annotations: None,
-                };
-
-                let pause_tool = Tool {
-                    name: "pause_torrent".to_string(),
-                    description: "Pause a torrent".to_string(),
-                    input_schema: Some(ToolSchema {
-                        properties: Some(json!({
-                            "hash": { "type": "string", "description": "Torrent hash (pipe-separated for multiple)" }
-                        })),
-                        required: Some(vec!["hash".to_string()]),
-                    }),
-                    annotations: None,
-                };
-
-                let resume_tool = Tool {
-                    name: "resume_torrent".to_string(),
-                    description: "Resume a torrent".to_string(),
-                    input_schema: Some(ToolSchema {
-                        properties: Some(json!({
-                            "hash": { "type": "string", "description": "Torrent hash (pipe-separated for multiple)" }
-                        })),
-                        required: Some(vec!["hash".to_string()]),
-                    }),
-                    annotations: None,
-                };
-
-                let delete_tool = Tool {
-                    name: "delete_torrent".to_string(),
-                    description: "Delete a torrent".to_string(),
-                    input_schema: Some(ToolSchema {
-                        properties: Some(json!({
-                            "hash": { "type": "string", "description": "Torrent hash (pipe-separated for multiple)" },
-                            "delete_files": { "type": "boolean", "description": "Also delete files" }
-                        })),
-                        required: Some(vec!["hash".to_string(), "delete_files".to_string()]),
-                    }),
-                    annotations: None,
-                };
-
-                let files_tool = Tool {
-                    name: "get_torrent_files".to_string(),
-                    description: "Get file list of a torrent".to_string(),
-                    input_schema: Some(ToolSchema {
-                        properties: Some(json!({
-                            "hash": { "type": "string", "description": "Torrent hash" }
-                        })),
-                        required: Some(vec!["hash".to_string()]),
-                    }),
-                    annotations: None,
-                };
-
-                let props_tool = Tool {
-                    name: "get_torrent_properties".to_string(),
-                    description: "Get properties of a torrent".to_string(),
-                    input_schema: Some(ToolSchema {
-                        properties: Some(json!({
-                            "hash": { "type": "string", "description": "Torrent hash" }
-                        })),
-                        required: Some(vec!["hash".to_string()]),
-                    }),
-                    annotations: None,
-                };
-
-                let transfer_tool = Tool {
-                    name: "get_global_transfer_info".to_string(),
-                    description: "Get global transfer information".to_string(),
+                let show_all_tool = Tool {
+                    name: "show_all_tools".to_string(),
+                    description: "Enable all available tools".to_string(),
                     input_schema: Some(ToolSchema {
                         properties: Some(json!({})),
                         required: None,
@@ -130,21 +62,114 @@ impl ServerHandler for AppHandler {
                     annotations: None,
                 };
 
-                let set_limits_tool = Tool {
-                    name: "set_global_transfer_limits".to_string(),
-                    description: "Set global download and/or upload limits".to_string(),
-                    input_schema: Some(ToolSchema {
-                        properties: Some(json!({
-                            "dl_limit": { "type": "integer", "description": "Download limit in bytes per second (0 for unlimited)" },
-                            "up_limit": { "type": "integer", "description": "Upload limit in bytes per second (0 for unlimited)" }
-                        })),
-                        required: None,
+                let mut tools = vec![list_tool];
+
+                if is_lazy {
+                    tools.push(show_all_tool);
+                } else {
+                    let add_tool = Tool {
+                        name: "add_torrent".to_string(),
+                        description: "Add a new torrent".to_string(),
+                        input_schema: Some(ToolSchema {
+                            properties: Some(json!({
+                                "url": { "type": "string", "description": "Magnet URI or HTTP URL" },
+                                "save_path": { "type": "string", "description": "Optional save path" },
+                                "category": { "type": "string", "description": "Optional category" }
+                            })),
+                            required: Some(vec!["url".to_string()]),
+                        }),
+                        annotations: None,
+                    };
+
+                    let pause_tool = Tool {
+                        name: "pause_torrent".to_string(),
+                        description: "Pause a torrent".to_string(),
+                        input_schema: Some(ToolSchema {
+                            properties: Some(json!({
+                                "hash": { "type": "string", "description": "Torrent hash (pipe-separated for multiple)" }
+                            })),
+                            required: Some(vec!["hash".to_string()]),
+                        }),
+                        annotations: None,
+                    };
+
+                    let resume_tool = Tool {
+                        name: "resume_torrent".to_string(),
+                        description: "Resume a torrent".to_string(),
+                        input_schema: Some(ToolSchema {
+                            properties: Some(json!({
+                                "hash": { "type": "string", "description": "Torrent hash (pipe-separated for multiple)" }
+                            })),
+                            required: Some(vec!["hash".to_string()]),
+                        }),
+                        annotations: None,
+                    };
+
+                    let delete_tool = Tool {
+                        name: "delete_torrent".to_string(),
+                        description: "Delete a torrent".to_string(),
+                        input_schema: Some(ToolSchema {
+                            properties: Some(json!({
+                                "hash": { "type": "string", "description": "Torrent hash (pipe-separated for multiple)" },
+                                "delete_files": { "type": "boolean", "description": "Also delete files" }
+                            })),
+                            required: Some(vec!["hash".to_string(), "delete_files".to_string()]),
+                        }),
+                        annotations: None,
+                    };
+
+                    let files_tool = Tool {
+                        name: "get_torrent_files".to_string(),
+                        description: "Get file list of a torrent".to_string(),
+                        input_schema: Some(ToolSchema {
+                            properties: Some(json!({
+                                "hash": { "type": "string", "description": "Torrent hash" }
+                            })),
+                            required: Some(vec!["hash".to_string()]),
+                        }),
+                        annotations: None,
+                    };
+
+                    let props_tool = Tool {
+                        name: "get_torrent_properties".to_string(),
+                        description: "Get properties of a torrent".to_string(),
+                        input_schema: Some(ToolSchema {
+                            properties: Some(json!({
+                                "hash": { "type": "string", "description": "Torrent hash" }
+                            })),
+                            required: Some(vec!["hash".to_string()]),
+                        }),
+                        annotations: None,
+                    };
+
+                    let transfer_tool = Tool {
+                        name: "get_global_transfer_info".to_string(),
+                        description: "Get global transfer information".to_string(),
+                        input_schema: Some(ToolSchema {
+                            properties: Some(json!({})),
+                            required: None,
                     }),
                     annotations: None,
-                };
+                    };
+
+                    let set_limits_tool = Tool {
+                        name: "set_global_transfer_limits".to_string(),
+                        description: "Set global download and/or upload limits".to_string(),
+                        input_schema: Some(ToolSchema {
+                            properties: Some(json!({
+                                "dl_limit": { "type": "integer", "description": "Download limit in bytes per second (0 for unlimited)" },
+                                "up_limit": { "type": "integer", "description": "Upload limit in bytes per second (0 for unlimited)" }
+                            })),
+                            required: None,
+                        }),
+                        annotations: None,
+                    };
+
+                    tools.extend(vec![add_tool, pause_tool, resume_tool, delete_tool, files_tool, props_tool, transfer_tool, set_limits_tool]);
+                }
 
                 Ok(json!({
-                    "tools": [list_tool, add_tool, pause_tool, resume_tool, delete_tool, files_tool, props_tool, transfer_tool, set_limits_tool]
+                    "tools": tools
                 }))
             }
             "tools/call" => {
@@ -264,6 +289,16 @@ impl ServerHandler for AppHandler {
 
                     Ok(json!({
                         "content": [{ "type": "text", "text": "Transfer limits updated successfully" }],
+                        "isError": false
+                    }))
+                } else if name == "show_all_tools" {
+                    self.lazy_mode.store(false, Ordering::Relaxed);
+                    // We should ideally send a notification here: `notifications/tools/list_changed`
+                    // But mcp-sdk-rs doesn't easily expose the notification mechanism here yet.
+                    // The client will need to refresh tools manually if possible, or we rely on the client noticing.
+                    // For now, we return a message telling the agent to refresh.
+                    Ok(json!({
+                        "content": [{ "type": "text", "text": "All tools enabled. Please refresh your tool list." }],
                         "isError": false
                     }))
                 } else {

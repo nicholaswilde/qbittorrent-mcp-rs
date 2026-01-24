@@ -9,6 +9,7 @@ pub struct AppConfig {
     pub qbittorrent_username: Option<String>,
     pub qbittorrent_password: Option<String>,
     pub server_mode: String,
+    pub lazy_mode: bool,
 }
 
 impl AppConfig {
@@ -27,7 +28,8 @@ impl AppConfig {
         builder = builder
             .set_default("qbittorrent_host", "localhost")?
             .set_default("qbittorrent_port", 8080)?
-            .set_default("server_mode", "stdio")?;
+            .set_default("server_mode", "stdio")?
+            .set_default("lazy_mode", false)?;
 
         // 3. Load from File
         if let Some(path) = path_to_load {
@@ -55,13 +57,16 @@ impl AppConfig {
         if let Some(pass) = matches.get_one::<String>("qbittorrent_password") {
             builder = builder.set_override("qbittorrent_password", pass.as_str())?;
         }
+        if matches.get_flag("lazy_mode") {
+            builder = builder.set_override("lazy_mode", true)?;
+        }
 
         builder.build()?.try_deserialize()
     }
 }
 
 fn parse_args(args: Vec<String>) -> ArgMatches {
-    use clap::{Arg, Command};
+    use clap::{Arg, Command, ArgAction};
 
     let cmd = Command::new("qbittorrent-mcp-rs")
         .arg(
@@ -94,6 +99,12 @@ fn parse_args(args: Vec<String>) -> ArgMatches {
             Arg::new("qbittorrent_password")
                 .long("qbittorrent-password")
                 .help("qBittorrent Password"),
+        )
+        .arg(
+            Arg::new("lazy_mode")
+                .long("lazy")
+                .action(ArgAction::SetTrue)
+                .help("Enable lazy mode (show fewer tools initially)"),
         );
 
     if args.is_empty() {

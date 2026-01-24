@@ -30,6 +30,10 @@ struct Args {
     /// qBittorrent Password
     #[arg(long)]
     qbittorrent_password: Option<String>,
+
+    /// Lazy mode (show fewer tools initially)
+    #[arg(long, action)]
+    lazy: bool,
 }
 
 #[tokio::main]
@@ -67,8 +71,8 @@ async fn run() -> anyhow::Result<()> {
     let config = AppConfig::load(None, args)?;
 
     info!(
-        "Starting qBittorrent MCP Server in {} mode",
-        config.server_mode
+        "Starting qBittorrent MCP Server in {} mode (lazy: {})",
+        config.server_mode, config.lazy_mode
     );
     info!(
         "Connecting to qBittorrent at {}:{}",
@@ -112,7 +116,7 @@ async fn run() -> anyhow::Result<()> {
 
     let server: Box<dyn MCPServer> = match config.server_mode.as_str() {
         "http" => Box::new(HttpServer::new(3000, client)),
-        _ => Box::new(StdioServer::new(client)),
+        _ => Box::new(StdioServer::new(client, config.lazy_mode)),
     };
 
     server.run().await.map_err(|e| anyhow::anyhow!(e))?;
