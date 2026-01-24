@@ -1,0 +1,96 @@
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Torrent {
+    pub hash: String,
+    pub name: String,
+    #[serde(rename = "size")]
+    pub size_bytes: i64,
+    pub progress: f64,
+    pub dlspeed: i64,
+    pub upspeed: i64,
+    pub priority: i64,
+    #[serde(rename = "num_seeds")]
+    pub num_seeds: i64,
+    #[serde(rename = "num_leechs")]
+    pub num_leechs: i64,
+    #[serde(rename = "num_incomplete")]
+    pub num_incomplete: i64,
+    #[serde(rename = "num_complete")]
+    pub num_complete: i64,
+    pub ratio: f64,
+    pub eta: i64,
+    pub state: String,
+    pub seq_dl: bool,
+    pub f_l_piece_prio: bool,
+    pub category: String,
+    pub tags: String,
+    pub super_seeding: bool,
+    pub force_start: bool,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_deserialize_torrent() {
+        let json = r#"
+        {
+            "added_on": 1500000000,
+            "amount_left": 0,
+            "auto_tmm": false,
+            "availability": 2,
+            "category": "ISOs",
+            "completed": 1000,
+            "completion_on": 1500000500,
+            "content_path": "/downloads/Ubuntu.iso",
+            "dl_limit": -1,
+            "dlspeed": 5000,
+            "downloaded": 1000,
+            "downloaded_session": 1000,
+            "eta": 3600,
+            "f_l_piece_prio": false,
+            "force_start": false,
+            "hash": "8c4a5c5b5d5e5f5g5h5i5j5k5l5m5n5o5p5q5r5s",
+            "last_activity": 1500001000,
+            "magnet_uri": "magnet:?xt=urn:btih:...",
+            "max_ratio": -1,
+            "max_seeding_time": -1,
+            "name": "Ubuntu Linux",
+            "num_complete": 10,
+            "num_incomplete": 5,
+            "num_leechs": 5,
+            "num_seeds": 10,
+            "priority": 1,
+            "progress": 0.5,
+            "ratio": 1.5,
+            "ratio_limit": -2,
+            "save_path": "/downloads/",
+            "seeding_time": 600,
+            "seeding_time_limit": -2,
+            "seen_complete": 1500000500,
+            "seq_dl": false,
+            "size": 2000000000,
+            "state": "downloading",
+            "super_seeding": false,
+            "tags": "linux,iso",
+            "time_active": 1000,
+            "total_size": 2000000000,
+            "tracker": "http://tracker.example.com",
+            "up_limit": -1,
+            "uploaded": 500,
+            "uploaded_session": 500,
+            "upspeed": 1000
+        }
+        "#;
+
+        let torrent: Torrent = serde_json::from_str(json).expect("Failed to deserialize torrent");
+
+        assert_eq!(torrent.hash, "8c4a5c5b5d5e5f5g5h5i5j5k5l5m5n5o5p5q5r5s");
+        assert_eq!(torrent.name, "Ubuntu Linux");
+        assert_eq!(torrent.size_bytes, 2000000000);
+        assert_eq!(torrent.state, "downloading");
+        assert_eq!(torrent.progress, 0.5);
+    }
+}

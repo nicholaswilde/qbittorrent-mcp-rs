@@ -8,7 +8,7 @@ anyhow = "1.0.100"
 axum = "0.8.8"
 clap = { version = "4.5.54", features = ["derive"] }
 config = "0.15.19"
-reqwest = { version = "0.13.1", features = ["json"] }
+reqwest = { version = "0.13.1", features = ["cookies", "form", "json"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 tokio = { version = "1.49.0", features = ["full"] }
@@ -18,3 +18,7 @@ tracing-subscriber = "0.3.22"
 
 [dev-dependencies]
 tempfile = "3.24.0"
+wiremock = "0.6.5"
+
+[profile.ci]
+inherits = "test"

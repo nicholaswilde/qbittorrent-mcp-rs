@@ -1,6 +1,6 @@
+use clap::ArgMatches;
 use config::{Config, ConfigError, Environment, File};
 use serde::Deserialize;
-use clap::ArgMatches;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct AppConfig {
@@ -34,22 +34,22 @@ impl AppConfig {
         builder = builder.add_source(Environment::default().try_parsing(true));
 
         // 4. Build to get intermediate config (to merge CLI overrides manually? or use a source?)
-        
+
         // We need to parse CLI args to get overrides.
         // Since `cli_args` is passed as a Vec<String> (for testing), we should parse it.
         // Use clap to parse `cli_args`.
-        
+
         let matches = parse_args(cli_args);
 
         // Apply overrides
         if let Some(host) = matches.get_one::<String>("qbittorrent_host") {
-             builder = builder.set_override("qbittorrent_host", host.as_str())?;
+            builder = builder.set_override("qbittorrent_host", host.as_str())?;
         }
         if let Some(port) = matches.get_one::<String>("qbittorrent_port") {
-             builder = builder.set_override("qbittorrent_port", port.as_str())?;
+            builder = builder.set_override("qbittorrent_port", port.as_str())?;
         }
         if let Some(mode) = matches.get_one::<String>("server_mode") {
-             builder = builder.set_override("server_mode", mode.as_str())?;
+            builder = builder.set_override("server_mode", mode.as_str())?;
         }
 
         builder.build()?.try_deserialize()
@@ -57,28 +57,38 @@ impl AppConfig {
 }
 
 fn parse_args(args: Vec<String>) -> ArgMatches {
-    use clap::{Command, Arg};
+    use clap::{Arg, Command};
 
     // If args is empty, it might mean "no args passed" (except binary name usually).
     // In our test, we pass "app", "flag".
     // If we call this from main, we might pass env::args().
-    
+
     let cmd = Command::new("qbittorrent-mcp-rs")
-        .arg(Arg::new("qbittorrent_host")
-            .long("qbittorrent-host")
-            .help("Host of the qBittorrent Web UI"))
-        .arg(Arg::new("qbittorrent_port")
-            .long("qbittorrent-port")
-            .help("Port of the qBittorrent Web UI"))
-        .arg(Arg::new("server_mode")
-            .long("server-mode")
-            .help("Server mode: stdio or http"))
-        .arg(Arg::new("qbittorrent_username")
-            .long("qbittorrent-username")
-            .help("qBittorrent Username"))
-        .arg(Arg::new("qbittorrent_password")
-            .long("qbittorrent-password")
-            .help("qBittorrent Password"));
+        .arg(
+            Arg::new("qbittorrent_host")
+                .long("qbittorrent-host")
+                .help("Host of the qBittorrent Web UI"),
+        )
+        .arg(
+            Arg::new("qbittorrent_port")
+                .long("qbittorrent-port")
+                .help("Port of the qBittorrent Web UI"),
+        )
+        .arg(
+            Arg::new("server_mode")
+                .long("server-mode")
+                .help("Server mode: stdio or http"),
+        )
+        .arg(
+            Arg::new("qbittorrent_username")
+                .long("qbittorrent-username")
+                .help("qBittorrent Username"),
+        )
+        .arg(
+            Arg::new("qbittorrent_password")
+                .long("qbittorrent-password")
+                .help("qBittorrent Password"),
+        );
 
     if args.is_empty() {
         cmd.get_matches_from(vec!["qbittorrent-mcp-rs"])
