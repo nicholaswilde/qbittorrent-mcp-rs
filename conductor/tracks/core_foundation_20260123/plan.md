@@ -7,8 +7,8 @@
     - [ ] Add dependencies (`tokio`, `reqwest`, `serde`, `serde_json`, `anyhow`, `tracing`, `clap`, `config`, `axum`, `tower-http`) to `Cargo.toml`
     - [ ] Set up basic logging (tracing-subscriber)
 - [ ] Task: Implement Configuration Loading
-    - [ ] Write Tests: Create `tests/config_test.rs` to verify loading from TOML, YAML, and JSON
-    - [ ] Implement `Config` struct and loading logic using the `config` crate (merging default, file, and env vars)
+    - [ ] Write Tests: Create `tests/config_test.rs` to verify loading from TOML, YAML, and JSON, and verify CLI argument overrides
+    - [ ] Implement `Config` struct and loading logic using the `config` crate (merging default, file, env vars, and CLI arguments via `clap`)
     - [ ] Verify Tests Pass
 - [ ] Task: Conductor - User Manual Verification 'Project Skeleton & Configuration' (Protocol in workflow.md)
 
