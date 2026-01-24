@@ -181,7 +181,60 @@ impl ServerHandler for AppHandler {
                         annotations: None,
                     };
 
-                    tools.extend(vec![search_tool, add_tool, pause_tool, resume_tool, delete_tool, files_tool, props_tool, transfer_tool, set_limits_tool]);
+                    let create_cat_tool = Tool {
+                        name: "create_category".to_string(),
+                        description: "Create a new category".to_string(),
+                        input_schema: Some(ToolSchema {
+                            properties: Some(json!({
+                                "name": { "type": "string", "description": "Category name" },
+                                "save_path": { "type": "string", "description": "Save path for category" }
+                            })),
+                            required: Some(vec!["name".to_string(), "save_path".to_string()]),
+                        }),
+                        annotations: None,
+                    };
+
+                    let set_cat_tool = Tool {
+                        name: "set_torrent_category".to_string(),
+                        description: "Set category for torrents".to_string(),
+                        input_schema: Some(ToolSchema {
+                            properties: Some(json!({
+                                "hashes": { "type": "string", "description": "Torrent hashes (pipe-separated)" },
+                                "category": { "type": "string", "description": "Category name" }
+                            })),
+                            required: Some(vec!["hashes".to_string(), "category".to_string()]),
+                        }),
+                        annotations: None,
+                    };
+
+                    let get_cats_tool = Tool {
+                        name: "get_categories".to_string(),
+                        description: "Get all categories".to_string(),
+                        input_schema: Some(ToolSchema {
+                            properties: Some(json!({})),
+                            required: None,
+                        }),
+                        annotations: None,
+                    };
+
+                    let add_tags_tool = Tool {
+                        name: "add_torrent_tags".to_string(),
+                        description: "Add tags to torrents".to_string(),
+                        input_schema: Some(ToolSchema {
+                            properties: Some(json!({
+                                "hashes": { "type": "string", "description": "Torrent hashes (pipe-separated)" },
+                                "tags": { "type": "string", "description": "Comma-separated tags" }
+                            })),
+                            required: Some(vec!["hashes".to_string(), "tags".to_string()]),
+                        }),
+                        annotations: None,
+                    };
+
+                    tools.extend(vec![
+                        search_tool, add_tool, pause_tool, resume_tool, delete_tool, 
+                        files_tool, props_tool, transfer_tool, set_limits_tool,
+                        create_cat_tool, set_cat_tool, get_cats_tool, add_tags_tool
+                    ]);
                 }
 
                 Ok(json!({
@@ -338,6 +391,47 @@ impl ServerHandler for AppHandler {
 
                     Ok(json!({
                         "content": [{ "type": "text", "text": "Transfer limits updated successfully" }],
+                        "isError": false
+                    }))
+                } else if name == "create_category" {
+                    let args = arguments.ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing arguments"))?;
+                    let cat_name = args.get("name").and_then(|v| v.as_str()).ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing name"))?;
+                    let save_path = args.get("save_path").and_then(|v| v.as_str()).ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing save_path"))?;
+
+                    self.client.create_category(cat_name, save_path).await.map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+
+                    Ok(json!({
+                        "content": [{ "type": "text", "text": "Category created successfully" }],
+                        "isError": false
+                    }))
+                } else if name == "set_torrent_category" {
+                    let args = arguments.ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing arguments"))?;
+                    let hashes = args.get("hashes").and_then(|v| v.as_str()).ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing hashes"))?;
+                    let category = args.get("category").and_then(|v| v.as_str()).ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing category"))?;
+
+                    self.client.set_category(hashes, category).await.map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+
+                    Ok(json!({
+                        "content": [{ "type": "text", "text": "Category set successfully" }],
+                        "isError": false
+                    }))
+                } else if name == "get_categories" {
+                    let categories = self.client.get_categories().await.map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+                    let text = serde_json::to_string_pretty(&categories).map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+
+                    Ok(json!({
+                        "content": [{ "type": "text", "text": text }],
+                        "isError": false
+                    }))
+                } else if name == "add_torrent_tags" {
+                    let args = arguments.ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing arguments"))?;
+                    let hashes = args.get("hashes").and_then(|v| v.as_str()).ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing hashes"))?;
+                    let tags = args.get("tags").and_then(|v| v.as_str()).ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing tags"))?;
+
+                    self.client.add_tags(hashes, tags).await.map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+
+                    Ok(json!({
+                        "content": [{ "type": "text", "text": "Tags added successfully" }],
                         "isError": false
                     }))
                 } else if name == "show_all_tools" {

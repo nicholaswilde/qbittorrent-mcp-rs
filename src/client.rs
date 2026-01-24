@@ -277,4 +277,55 @@ impl QBitClient {
             Err(anyhow!("Failed to delete search: {}", resp.status()))
         }
     }
+
+    pub async fn get_categories(&self) -> Result<std::collections::HashMap<String, crate::models::Category>> {
+        let url = format!("{}/api/v2/torrents/categories", self.base_url);
+        let resp = self.http.get(&url).send().await?;
+
+        if resp.status().is_success() {
+            let categories = resp.json().await?;
+            Ok(categories)
+        } else {
+            Err(anyhow!("Failed to get categories: {}", resp.status()))
+        }
+    }
+
+    pub async fn create_category(&self, name: &str, save_path: &str) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/createCategory", self.base_url);
+        let params = [("category", name), ("savePath", save_path)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to create category: {}", resp.status()))
+        }
+    }
+
+    pub async fn set_category(&self, hashes: &str, category: &str) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/setCategory", self.base_url);
+        let params = [("hashes", hashes), ("category", category)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to set category: {}", resp.status()))
+        }
+    }
+
+    pub async fn add_tags(&self, hashes: &str, tags: &str) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/addTags", self.base_url);
+        let params = [("hashes", hashes), ("tags", tags)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to add tags: {}", resp.status()))
+        }
+    }
 }

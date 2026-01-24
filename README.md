@@ -116,6 +116,12 @@ The server exposes the following tools to the LLM, categorized by functionality:
 - `get_global_transfer_info`: Get global download/upload speeds, data usage, and limits.
 - `set_global_transfer_limits`: Set global download and/or upload speed limits (in bytes per second).
 
+### Categories & Tags
+- `create_category`: Create a new category with a save path.
+- `set_torrent_category`: Assign a category to one or more torrents.
+- `get_categories`: List all available categories.
+- `add_torrent_tags`: Add tags to one or more torrents.
+
 ### System Tools
 - `show_all_tools`: Enable all available tools when running in `--lazy` mode.
 

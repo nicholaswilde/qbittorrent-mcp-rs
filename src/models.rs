@@ -123,6 +123,13 @@ pub struct SearchResultsResponse {
     pub total: i64,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Category {
+    pub name: String,
+    #[serde(rename = "savePath")]
+    pub save_path: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
