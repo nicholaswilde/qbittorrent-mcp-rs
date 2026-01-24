@@ -255,6 +255,7 @@ A task is complete when:
 7. Implementation notes added to `plan.md`
 8. Changes committed with proper message
 9. Git note with task summary attached to the commit
+10. README.md updated to reflect new features
 
 ## Emergency Procedures
 

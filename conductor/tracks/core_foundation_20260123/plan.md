@@ -4,11 +4,11 @@
 
 - [ ] Task: Initialize Rust project and dependencies
     - [ ] Initialize new cargo project
-    - [ ] Add dependencies (`tokio`, `reqwest`, `serde`, `serde_json`, `anyhow`, `tracing`, `clap`) to `Cargo.toml`
+    - [ ] Add dependencies (`tokio`, `reqwest`, `serde`, `serde_json`, `anyhow`, `tracing`, `clap`, `config`, `axum`, `tower-http`) to `Cargo.toml`
     - [ ] Set up basic logging (tracing-subscriber)
 - [ ] Task: Implement Configuration Loading
-    - [ ] Write Tests: Create `tests/config_test.rs` to verify env var loading
-    - [ ] Implement `Config` struct and loading logic (from env vars: `QBITTORRENT_URL`, `QBITTORRENT_USERNAME`, `QBITTORRENT_PASSWORD`)
+    - [ ] Write Tests: Create `tests/config_test.rs` to verify loading from TOML, YAML, and JSON
+    - [ ] Implement `Config` struct and loading logic using the `config` crate (merging default, file, and env vars)
     - [ ] Verify Tests Pass
 - [ ] Task: Conductor - User Manual Verification 'Project Skeleton & Configuration' (Protocol in workflow.md)
 
@@ -28,13 +28,21 @@
     - [ ] Verify Tests Pass
 - [ ] Task: Conductor - User Manual Verification 'qBittorrent Client (Internal API)' (Protocol in workflow.md)
 
-## Phase 3: MCP Server Integration
+## Phase 3: MCP Server Integration (Dual Mode)
 
-- [ ] Task: Set up MCP Server Structure
-    - [ ] Add `mcp_sdk_rs` (or equivalent) dependency
-    - [ ] Create basic server struct and main loop
+- [ ] Task: Set up MCP Server Structure & CLI Args
+    - [ ] Implement `clap` arguments to select between `stdio` and `http` modes (and specify config path)
+    - [ ] Create basic server traits/structs to abstract the transport layer
+- [ ] Task: Implement Stdio Transport
+    - [ ] Integrate `mcp_sdk_rs` (or equivalent) for stdio
+    - [ ] Write test/verification script
+- [ ] Task: Implement HTTP Transport
+    - [ ] Set up `axum` router for MCP (SSE endpoint, POST endpoint)
+    - [ ] Write test/verification script
 - [ ] Task: Register `list_torrents` Tool
     - [ ] Implement the `Tool` trait/interface for `list_torrents`
     - [ ] Connect the tool execution to `QBitClient::get_torrent_list`
-    - [ ] Write integration test: Simulate MCP request for tool execution
+    - [ ] Verify tool availability in both transports
+- [ ] Task: Update README
+    - [ ] Create/Update `README.md` with installation, configuration (file formats), and usage instructions (stdio vs http)
 - [ ] Task: Conductor - User Manual Verification 'MCP Server Integration' (Protocol in workflow.md)

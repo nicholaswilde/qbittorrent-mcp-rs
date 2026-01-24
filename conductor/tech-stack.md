@@ -10,6 +10,10 @@
 ## Communication & API
 - **JSON-RPC:** The underlying protocol for MCP communication.
 - **reqwest:** For making asynchronous HTTP requests to the qBittorrent Web UI API.
+- **axum:** For the HTTP server implementation.
+
+## Configuration
+- **config:** For loading configuration from `config.toml`, `config.yaml`, or `config.json` files.
 
 ## Testing & Quality Assurance
 - **Cargo Test:** For unit and integration testing.
