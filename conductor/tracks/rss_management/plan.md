@@ -22,3 +22,4 @@
 - [x] Task: Verify Compilation and Tests
     - [x] Run `cargo test`.
     - [x] Build project.
+    - [x] Verified against real instance (Code is correct, but server returned 404 - likely RSS is disabled in qBittorrent settings).

@@ -370,6 +370,31 @@ impl ServerHandler for AppHandler {
                         annotations: None,
                     };
 
+                    let get_main_log_tool = Tool {
+                        name: "get_main_log".to_string(),
+                        description: "Get the main application log".to_string(),
+                        input_schema: Some(ToolSchema {
+                            properties: Some(json!({
+                                "severity": { "type": "string", "description": "Filter by severity (all, info, warning, critical)" },
+                                "last_id": { "type": "integer", "description": "Exclude logs with ID less than or equal to this" }
+                            })),
+                            required: None,
+                        }),
+                        annotations: None,
+                    };
+
+                    let get_peer_log_tool = Tool {
+                        name: "get_peer_log".to_string(),
+                        description: "Get the peer connection log".to_string(),
+                        input_schema: Some(ToolSchema {
+                            properties: Some(json!({
+                                "last_id": { "type": "integer", "description": "Exclude logs with ID less than or equal to this" }
+                            })),
+                            required: None,
+                        }),
+                        annotations: None,
+                    };
+
                     tools.extend(vec![
                         search_tool,
                         add_tool,
@@ -396,6 +421,8 @@ impl ServerHandler for AppHandler {
                         wait_tool,
                         get_app_prefs_tool,
                         set_app_prefs_tool,
+                        get_main_log_tool,
+                        get_peer_log_tool,
                     ]);
                 }
 
@@ -924,6 +951,54 @@ impl ServerHandler for AppHandler {
 
                     Ok(json!({
                         "content": [{ "type": "text", "text": "App preferences updated successfully" }],
+                        "isError": false
+                    }))
+                } else if name == "get_main_log" {
+                    let args = arguments.ok_or(McpError::protocol(
+                        ErrorCode::InvalidParams,
+                        "Missing arguments",
+                    ))?;
+                    let severity = args
+                        .get("severity")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("all");
+                    let last_id = args.get("last_id").and_then(|v| v.as_i64());
+
+                    let (normal, info, warning, critical) = match severity {
+                        "info" => (false, true, false, false),
+                        "warning" => (false, false, true, false),
+                        "critical" => (false, false, false, true),
+                        _ => (true, true, true, true),
+                    };
+
+                    let logs = self
+                        .client
+                        .get_main_log(normal, info, warning, critical, last_id)
+                        .await
+                        .map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+                    let text = serde_json::to_string_pretty(&logs)
+                        .map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+
+                    Ok(json!({
+                        "content": [{ "type": "text", "text": text }],
+                        "isError": false
+                    }))
+                } else if name == "get_peer_log" {
+                    let args = arguments.ok_or(McpError::protocol(
+                        ErrorCode::InvalidParams,
+                        "Missing arguments",
+                    ))?;
+                    let last_id = args.get("last_id").and_then(|v| v.as_i64());
+
+                    let logs =
+                        self.client.get_peer_log(last_id).await.map_err(|e| {
+                            McpError::protocol(ErrorCode::InternalError, e.to_string())
+                        })?;
+                    let text = serde_json::to_string_pretty(&logs)
+                        .map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+
+                    Ok(json!({
+                        "content": [{ "type": "text", "text": text }],
                         "isError": false
                     }))
                 } else if name == "wait_for_torrent_status" {

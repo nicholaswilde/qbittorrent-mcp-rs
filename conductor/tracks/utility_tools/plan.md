@@ -16,3 +16,4 @@
 - [x] Task: Verify Compilation and Tests
     - [x] Run `cargo test`.
     - [x] Build project.
+    - [x] Verified against real instance (Code logic verified, targeted info retrieval works).

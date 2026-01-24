@@ -523,4 +523,49 @@ impl QBitClient {
             Err(anyhow!("Failed to set app preferences: {}", resp.status()))
         }
     }
+
+    pub async fn get_main_log(
+        &self,
+        normal: bool,
+        info: bool,
+        warning: bool,
+        critical: bool,
+        last_id: Option<i64>,
+    ) -> Result<Vec<crate::models::LogEntry>> {
+        let mut url = format!(
+            "{}/api/v2/log/main?normal={}&info={}&warning={}&critical={}",
+            self.base_url, normal, info, warning, critical
+        );
+        if let Some(id) = last_id {
+            url.push_str(&format!("&last_id={}", id));
+        }
+
+        let resp = self.http.get(&url).send().await?;
+
+        if resp.status().is_success() {
+            let logs = resp.json().await?;
+            Ok(logs)
+        } else {
+            Err(anyhow!("Failed to get main log: {}", resp.status()))
+        }
+    }
+
+    pub async fn get_peer_log(
+        &self,
+        last_id: Option<i64>,
+    ) -> Result<Vec<crate::models::PeerLogEntry>> {
+        let mut url = format!("{}/api/v2/log/peers", self.base_url);
+        if let Some(id) = last_id {
+            url.push_str(&format!("?last_id={}", id));
+        }
+
+        let resp = self.http.get(&url).send().await?;
+
+        if resp.status().is_success() {
+            let logs = resp.json().await?;
+            Ok(logs)
+        } else {
+            Err(anyhow!("Failed to get peer log: {}", resp.status()))
+        }
+    }
 }

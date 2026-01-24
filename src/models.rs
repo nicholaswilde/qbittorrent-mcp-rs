@@ -169,6 +169,24 @@ pub struct RssRule {
     pub save_path: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LogEntry {
+    pub id: i64,
+    pub message: String,
+    pub timestamp: i64,
+    #[serde(rename = "type")]
+    pub severity: i64, // 1: Normal, 2: Info, 4: Warning, 8: Critical
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PeerLogEntry {
+    pub id: i64,
+    pub ip: String,
+    pub timestamp: i64,
+    pub blocked: bool,
+    pub reason: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

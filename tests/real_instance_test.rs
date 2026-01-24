@@ -89,6 +89,39 @@ async fn test_real_instance_connectivity() {
                 Err(e) => println!("Failed to get global info: {}", e),
             }
 
+            // Test App Preferences
+            println!("\n--- Testing App Preferences ---");
+            match client.get_app_preferences().await {
+                Ok(prefs) => {
+                    println!("Successfully retrieved app preferences");
+                    println!("Save path: {}", prefs["save_path"]);
+                }
+                Err(e) => println!("Failed to get app preferences: {}", e),
+            }
+
+            // Test RSS
+            println!("\n--- Testing RSS ---");
+            match client.get_all_rss_feeds().await {
+                Ok(feeds) => println!("Successfully retrieved {} RSS feeds", feeds.len()),
+                Err(e) => println!("Failed to get RSS feeds: {}", e),
+            }
+            match client.get_all_rss_rules().await {
+                Ok(rules) => println!("Successfully retrieved {} RSS rules", rules.len()),
+                Err(e) => println!("Failed to get RSS rules: {}", e),
+            }
+
+            // Test Search Plugins
+            println!("\n--- Testing Search Plugins ---");
+            match client.get_search_plugins().await {
+                Ok(plugins) => {
+                    println!("Successfully retrieved {} search plugins", plugins.len());
+                    for p in plugins.iter().take(3) {
+                        println!(" - {}: enabled={}", p.name, p.enabled);
+                    }
+                }
+                Err(e) => println!("Failed to get search plugins: {}", e),
+            }
+
             // Test Search
             println!("\n--- Testing Search (ubuntu) ---");
             match client.start_search("ubuntu", None).await {

@@ -143,6 +143,10 @@ The server exposes the following tools to the LLM, categorized by functionality:
 ### Utility Tools
 - `wait_for_torrent_status`: Poll a torrent until it reaches a desired state (e.g., "uploading") or timeout. Useful for sequential automation without constant polling from the agent.
 
+### System Logs
+- `get_main_log`: Retrieve the main application log (filter by severity).
+- `get_peer_log`: Retrieve the peer connection log.
+
 ### System Tools
 - `show_all_tools`: Enable all available tools when running in `--lazy` mode.
 

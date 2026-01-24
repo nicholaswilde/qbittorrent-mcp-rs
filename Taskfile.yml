@@ -79,7 +79,7 @@ tasks:
       HOST: '{{.HOST | default .LOCAL_IP}}'
       ALLOWED_ORIGINS: '{{.ALLOWED_ORIGINS | default (printf "http://%s:6274" .LOCAL_IP)}}'
     cmds:
-      - npx @modelcontextprotocol/inspector -- ./target/debug/proxmox-mcp-rs --config config.toml
+      - npx @modelcontextprotocol/inspector -- ./target/debug/qbittorrent-mcp-rs --config config.toml
 
   check:
     desc: Check code for errors without generating binary
@@ -120,17 +120,17 @@ tasks:
   docker:build:
     desc: Build the Docker image for multiple architectures (amd64, arm64)
     cmds:
-      - docker buildx build --platform linux/amd64,linux/arm64 -t proxmox-mcp-rs .
+      - docker buildx build --platform linux/amd64,linux/arm64 -t qbittorrent-mcp-rs .
 
   docker:run:
     desc: Run the Docker image (requires env vars or config file mounted)
     cmds:
-      - docker run --rm -it proxmox-mcp-rs --help
+      - docker run --rm -it qbittorrent-mcp-rs --help
 
   docker:load:
     desc: Build and load the Docker image into the local daemon (single arch)
     cmds:
-      - docker buildx build --load -t proxmox-mcp-rs .
+      - docker buildx build --load -t qbittorrent-mcp-rs .
 
   clean:
     desc: Clean build artifacts
