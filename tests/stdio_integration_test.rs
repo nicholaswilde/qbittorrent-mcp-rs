@@ -13,6 +13,12 @@ fn test_stdio_interaction() {
         let mut c = Command::new("/usr/bin/qemu-aarch64-static");
         c.arg(bin_path);
         c
+    } else if (std::env::consts::ARCH == "arm" || std::env::consts::ARCH == "armhf")
+        && std::path::Path::new("/usr/bin/qemu-arm-static").exists()
+    {
+        let mut c = Command::new("/usr/bin/qemu-arm-static");
+        c.arg(bin_path);
+        c
     } else {
         Command::new(bin_path)
     };

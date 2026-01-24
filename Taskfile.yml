@@ -52,6 +52,34 @@ tasks:
     cmds:
       - cargo build --release
 
+  test:cross:
+    desc: Run tests for all supported architectures (requires cross)
+    cmds:
+      - task: test:cross:amd64
+      - task: test:cross:arm64
+      - task: test:cross:armv7
+      - task: test:cross:armv6
+
+  test:cross:amd64:
+    desc: Test for AMD64 (x86_64)
+    cmds:
+      - cross test --verbose --workspace --target x86_64-unknown-linux-gnu
+
+  test:cross:arm64:
+    desc: Test for ARM64 (aarch64)
+    cmds:
+      - cross test --verbose --workspace --target aarch64-unknown-linux-gnu
+
+  test:cross:armv7:
+    desc: Test for ARMv7
+    cmds:
+      - cross test --verbose --workspace --target armv7-unknown-linux-gnueabihf
+
+  test:cross:armv6:
+    desc: Test for ARMv6
+    cmds:
+      - cross test --verbose --workspace --target arm-unknown-linux-gnueabihf
+
   build:debug:
     desc: Build the project in debug mode
     cmds:
