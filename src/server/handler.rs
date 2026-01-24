@@ -120,8 +120,31 @@ impl ServerHandler for AppHandler {
                     annotations: None,
                 };
 
+                let transfer_tool = Tool {
+                    name: "get_global_transfer_info".to_string(),
+                    description: "Get global transfer information".to_string(),
+                    input_schema: Some(ToolSchema {
+                        properties: Some(json!({})),
+                        required: None,
+                    }),
+                    annotations: None,
+                };
+
+                let set_limits_tool = Tool {
+                    name: "set_global_transfer_limits".to_string(),
+                    description: "Set global download and/or upload limits".to_string(),
+                    input_schema: Some(ToolSchema {
+                        properties: Some(json!({
+                            "dl_limit": { "type": "integer", "description": "Download limit in bytes per second (0 for unlimited)" },
+                            "up_limit": { "type": "integer", "description": "Upload limit in bytes per second (0 for unlimited)" }
+                        })),
+                        required: None,
+                    }),
+                    annotations: None,
+                };
+
                 Ok(json!({
-                    "tools": [list_tool, add_tool, pause_tool, resume_tool, delete_tool, files_tool, props_tool]
+                    "tools": [list_tool, add_tool, pause_tool, resume_tool, delete_tool, files_tool, props_tool, transfer_tool, set_limits_tool]
                 }))
             }
             "tools/call" => {
@@ -217,6 +240,30 @@ impl ServerHandler for AppHandler {
 
                     Ok(json!({
                         "content": [{ "type": "text", "text": text }],
+                        "isError": false
+                    }))
+                } else if name == "get_global_transfer_info" {
+                    let info = self.client.get_global_transfer_info().await.map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+                    let text = serde_json::to_string_pretty(&info).map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+
+                    Ok(json!({
+                        "content": [{ "type": "text", "text": text }],
+                        "isError": false
+                    }))
+                } else if name == "set_global_transfer_limits" {
+                    let args = arguments.ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing arguments"))?;
+                    let dl_limit = args.get("dl_limit").and_then(|v| v.as_i64());
+                    let up_limit = args.get("up_limit").and_then(|v| v.as_i64());
+
+                    if let Some(limit) = dl_limit {
+                        self.client.set_download_limit(limit).await.map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+                    }
+                    if let Some(limit) = up_limit {
+                        self.client.set_upload_limit(limit).await.map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+                    }
+
+                    Ok(json!({
+                        "content": [{ "type": "text", "text": "Transfer limits updated successfully" }],
                         "isError": false
                     }))
                 } else {

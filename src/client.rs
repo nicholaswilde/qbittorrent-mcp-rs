@@ -175,4 +175,43 @@ impl QBitClient {
             Err(anyhow!("Failed to get torrent properties: {}", resp.status()))
         }
     }
+
+    pub async fn get_global_transfer_info(&self) -> Result<crate::models::TransferInfo> {
+        let url = format!("{}/api/v2/transfer/info", self.base_url);
+
+        let resp = self.http.get(&url).send().await?;
+
+        if resp.status().is_success() {
+            let info = resp.json::<crate::models::TransferInfo>().await?;
+            Ok(info)
+        } else {
+            Err(anyhow!("Failed to get global transfer info: {}", resp.status()))
+        }
+    }
+
+    pub async fn set_download_limit(&self, limit: i64) -> Result<()> {
+        let url = format!("{}/api/v2/transfer/setDownloadLimit", self.base_url);
+        let params = [("limit", limit.to_string())];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to set download limit: {}", resp.status()))
+        }
+    }
+
+    pub async fn set_upload_limit(&self, limit: i64) -> Result<()> {
+        let url = format!("{}/api/v2/transfer/setUploadLimit", self.base_url);
+        let params = [("limit", limit.to_string())];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to set upload limit: {}", resp.status()))
+        }
+    }
 }

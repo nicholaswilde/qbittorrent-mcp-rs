@@ -76,6 +76,18 @@ pub struct TorrentProperties {
     pub up_speed: i64,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TransferInfo {
+    pub dl_info_speed: i64,
+    pub dl_info_data: i64,
+    pub up_info_speed: i64,
+    pub up_info_data: i64,
+    pub dl_rate_limit: i64,
+    pub up_rate_limit: i64,
+    pub dht_nodes: i64,
+    pub connection_status: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
