@@ -88,6 +88,41 @@ pub struct TransferInfo {
     pub connection_status: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SearchResult {
+    #[serde(rename = "fileName")]
+    pub file_name: String,
+    #[serde(rename = "fileUrl")]
+    pub file_url: String,
+    #[serde(rename = "fileSize")]
+    pub file_size: i64,
+    #[serde(rename = "nbSeeders")]
+    pub nb_seeders: i64,
+    #[serde(rename = "nbLeechers")]
+    pub nb_leechers: i64,
+    #[serde(rename = "siteUrl")]
+    pub site_url: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SearchJob {
+    pub id: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SearchStatus {
+    pub id: i64,
+    pub status: String, // "Running", "Stopped"
+    pub total: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SearchResultsResponse {
+    pub results: Vec<SearchResult>,
+    pub status: String,
+    pub total: i64,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

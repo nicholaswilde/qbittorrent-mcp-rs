@@ -98,6 +98,9 @@ Server will listen on port 3000.
 
 The server exposes the following tools to the LLM, categorized by functionality:
 
+### Search
+- `search_torrents`: Search for torrents using qBittorrent's search engine (waits 5 seconds for results).
+
 ### Torrent Management
 - `list_torrents`: List all torrents with their status and progress.
 - `add_torrent`: Add a new torrent via Magnet URI or HTTP URL.

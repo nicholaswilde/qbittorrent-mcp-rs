@@ -8,6 +8,9 @@ use mcp_sdk_rs::types::{ClientCapabilities, Implementation, ServerCapabilities, 
 use serde_json::{Value, json};
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use std::time::Duration;
+use tokio::time::sleep;
+
 pub struct AppHandler {
     client: QBitClient,
     lazy_mode: AtomicBool,
@@ -67,6 +70,19 @@ impl ServerHandler for AppHandler {
                 if is_lazy {
                     tools.push(show_all_tool);
                 } else {
+                    let search_tool = Tool {
+                        name: "search_torrents".to_string(),
+                        description: "Search for torrents (waits 5s for results)".to_string(),
+                        input_schema: Some(ToolSchema {
+                            properties: Some(json!({
+                                "query": { "type": "string", "description": "Search query" },
+                                "category": { "type": "string", "description": "Optional category" }
+                            })),
+                            required: Some(vec!["query".to_string()]),
+                        }),
+                        annotations: None,
+                    };
+
                     let add_tool = Tool {
                         name: "add_torrent".to_string(),
                         description: "Add a new torrent".to_string(),
@@ -165,7 +181,7 @@ impl ServerHandler for AppHandler {
                         annotations: None,
                     };
 
-                    tools.extend(vec![add_tool, pause_tool, resume_tool, delete_tool, files_tool, props_tool, transfer_tool, set_limits_tool]);
+                    tools.extend(vec![search_tool, add_tool, pause_tool, resume_tool, delete_tool, files_tool, props_tool, transfer_tool, set_limits_tool]);
                 }
 
                 Ok(json!({
@@ -200,6 +216,39 @@ impl ServerHandler for AppHandler {
                                 "text": text
                             }
                         ],
+                        "isError": false
+                    }))
+                } else if name == "search_torrents" {
+                    let args = arguments.ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing arguments"))?;
+                    let query = args.get("query").and_then(|v| v.as_str()).ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing query"))?;
+                    let category = args.get("category").and_then(|v| v.as_str());
+
+                    // Start search
+                    let id = self.client.start_search(query, category).await.map_err(|e| McpError::protocol(ErrorCode::InternalError, format!("Failed to start search: {}", e)))?;
+
+                    // Poll results for 5 seconds (5 checks)
+                    let mut final_results = Vec::new();
+                    
+                    for _ in 0..5 {
+                        sleep(Duration::from_secs(1)).await;
+                        let resp = self.client.get_search_results(id, None, None).await;
+                        if let Ok(r) = resp {
+                            if r.status == "Stopped" {
+                                final_results = r.results;
+                                break;
+                            }
+                            final_results = r.results;
+                        }
+                    }
+
+                    // Stop and delete
+                    let _ = self.client.stop_search(id).await;
+                    let _ = self.client.delete_search(id).await;
+
+                    let text = serde_json::to_string_pretty(&final_results).map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+
+                    Ok(json!({
+                        "content": [{ "type": "text", "text": text }],
                         "isError": false
                     }))
                 } else if name == "add_torrent" {

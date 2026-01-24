@@ -1,0 +1,7 @@
+{
+    "id": "search_functionality",
+    "name": "Search Functionality",
+    "description": "Implement torrent search capability via qBittorrent API.",
+    "status": "active",
+    "created_at": "2026-01-23"
+}

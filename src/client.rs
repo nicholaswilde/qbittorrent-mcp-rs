@@ -214,4 +214,67 @@ impl QBitClient {
             Err(anyhow!("Failed to set upload limit: {}", resp.status()))
         }
     }
+
+    pub async fn start_search(&self, pattern: &str, category: Option<&str>) -> Result<i64> {
+        let url = format!("{}/api/v2/search/start", self.base_url);
+        let mut params = vec![("pattern", pattern)];
+        if let Some(cat) = category {
+            params.push(("category", cat));
+        }
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            let job: crate::models::SearchJob = resp.json().await?;
+            Ok(job.id)
+        } else {
+            Err(anyhow!("Failed to start search: {}", resp.status()))
+        }
+    }
+
+    pub async fn get_search_results(&self, id: i64, limit: Option<i64>, offset: Option<i64>) -> Result<crate::models::SearchResultsResponse> {
+        let url = format!("{}/api/v2/search/results", self.base_url);
+        let mut params = vec![("id", id.to_string())];
+        if let Some(l) = limit {
+            params.push(("limit", l.to_string()));
+        }
+        if let Some(o) = offset {
+            params.push(("offset", o.to_string()));
+        }
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            let results: crate::models::SearchResultsResponse = resp.json().await?;
+            Ok(results)
+        } else {
+            Err(anyhow!("Failed to get search results: {}", resp.status()))
+        }
+    }
+
+    pub async fn stop_search(&self, id: i64) -> Result<()> {
+        let url = format!("{}/api/v2/search/stop", self.base_url);
+        let params = [("id", id.to_string())];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to stop search: {}", resp.status()))
+        }
+    }
+
+    pub async fn delete_search(&self, id: i64) -> Result<()> {
+        let url = format!("{}/api/v2/search/delete", self.base_url);
+        let params = [("id", id.to_string())];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to delete search: {}", resp.status()))
+        }
+    }
 }
