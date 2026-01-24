@@ -6,7 +6,7 @@ use wiremock::{Mock, MockServer, ResponseTemplate};
 #[tokio::test]
 async fn test_app_preferences() -> Result<()> {
     let mock_server = MockServer::start().await;
-    let client = QBitClient::new_no_auth(mock_server.uri());
+    let client = QBitClient::new_no_auth(mock_server.uri(), false);
 
     // Get Preferences
     Mock::given(method("GET"))

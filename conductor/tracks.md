@@ -3,6 +3,7 @@
 This file tracks all major tracks for the project. Each track has its own detailed plan in its respective folder.
 
 ## Active Tracks
+- [Advanced Functionality](./tracks/advanced_functionality/plan.md)
 - [System Log Inspection](./tracks/log_inspection/plan.md) - Implementing tools to retrieve system and peer logs.
 
 ## Completed Tracks

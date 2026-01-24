@@ -6,7 +6,7 @@ use wiremock::{Mock, MockServer, ResponseTemplate};
 #[tokio::test]
 async fn test_add_torrent() -> Result<()> {
     let mock_server = MockServer::start().await;
-    let client = QBitClient::new_no_auth(mock_server.uri());
+    let client = QBitClient::new_no_auth(mock_server.uri(), false);
 
     Mock::given(method("POST"))
         .and(path("/api/v2/torrents/add"))
@@ -34,7 +34,7 @@ async fn test_add_torrent() -> Result<()> {
 #[tokio::test]
 async fn test_manage_torrents() -> Result<()> {
     let mock_server = MockServer::start().await;
-    let client = QBitClient::new_no_auth(mock_server.uri());
+    let client = QBitClient::new_no_auth(mock_server.uri(), false);
 
     Mock::given(method("POST"))
         .and(path("/api/v2/torrents/pause"))

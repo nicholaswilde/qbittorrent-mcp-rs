@@ -4,8 +4,9 @@
 # Can be an IP address, a hostname, or a full URL (http/https).
 qbittorrent_host = "localhost"
 
-# The port of the qBittorrent Web UI. Default is 8080.
-qbittorrent_port = 8080
+# The port of the qBittorrent Web UI. 
+# Optional. Defaults to 80 for http, 443 for https.
+# qbittorrent_port = 8080
 
 # qBittorrent Web UI Username.
 # qbittorrent_username = "admin"
@@ -17,3 +18,32 @@ qbittorrent_port = 8080
 # "stdio" is used for direct integration with local MCP clients (e.g., Claude Desktop).
 # "http" starts an SSE server on port 3000.
 server_mode = "stdio"
+
+# Enable lazy mode (show fewer tools initially to save tokens).
+lazy_mode = false
+
+# Disable SSL certificate verification (insecure).
+# Useful for self-signed certificates.
+no_verify_ssl = false
+
+# Authentication token for HTTP server mode.
+# If set, clients must provide this token in the 'Authorization: Bearer <token>' header
+# or as a 'token' query parameter.
+# http_auth_token = "my-secret-token"
+
+# --- Logging Configuration ---
+
+# Log level (error, warn, info, debug, trace). Default is "info".
+log_level = "info"
+
+# Enable logging to a file.
+log_file_enable = false
+
+# Log file directory. Default is ".".
+log_dir = "."
+
+# Log filename prefix. Default is "qbittorrent-mcp-rs.log".
+log_filename = "qbittorrent-mcp-rs.log"
+
+# Log rotation strategy (daily, hourly, never). Default is "daily".
+log_rotate = "daily"

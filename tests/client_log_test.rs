@@ -6,7 +6,7 @@ use wiremock::{Mock, MockServer, ResponseTemplate};
 #[tokio::test]
 async fn test_log_operations() -> Result<()> {
     let mock_server = MockServer::start().await;
-    let client = QBitClient::new_no_auth(mock_server.uri());
+    let client = QBitClient::new_no_auth(mock_server.uri(), false);
 
     // Main Log
     Mock::given(method("GET"))

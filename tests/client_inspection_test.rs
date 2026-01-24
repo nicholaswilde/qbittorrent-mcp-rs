@@ -6,7 +6,7 @@ use wiremock::{Mock, MockServer, ResponseTemplate};
 #[tokio::test]
 async fn test_get_torrent_files() -> Result<()> {
     let mock_server = MockServer::start().await;
-    let client = QBitClient::new_no_auth(mock_server.uri());
+    let client = QBitClient::new_no_auth(mock_server.uri(), false);
 
     let json_response = r#"[
         {
@@ -38,7 +38,7 @@ async fn test_get_torrent_files() -> Result<()> {
 #[tokio::test]
 async fn test_get_torrent_properties() -> Result<()> {
     let mock_server = MockServer::start().await;
-    let client = QBitClient::new_no_auth(mock_server.uri());
+    let client = QBitClient::new_no_auth(mock_server.uri(), false);
 
     // Minimal JSON for TorrentProperties based on our struct
     let json_response = r#"{

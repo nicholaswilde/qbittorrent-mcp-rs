@@ -7,7 +7,7 @@ use tempfile::tempdir;
 fn test_load_config_defaults() {
     let config = AppConfig::load(None, vec![]).expect("Failed to load default config");
     assert_eq!(config.qbittorrent_host, "localhost");
-    assert_eq!(config.qbittorrent_port, 8080);
+    assert_eq!(config.qbittorrent_port, None);
     assert_eq!(config.server_mode, "stdio");
 }
 
@@ -23,7 +23,7 @@ fn test_load_config_from_toml() {
         .expect("Failed to load config from TOML");
 
     assert_eq!(config.qbittorrent_host, "test_host");
-    assert_eq!(config.qbittorrent_port, 1234);
+    assert_eq!(config.qbittorrent_port, Some(1234));
 }
 
 #[test]
@@ -44,7 +44,7 @@ fn test_load_config_from_json() {
         .expect("Failed to load config from JSON");
 
     assert_eq!(config.qbittorrent_host, "json_host");
-    assert_eq!(config.qbittorrent_port, 5678);
+    assert_eq!(config.qbittorrent_port, Some(5678));
 }
 
 #[test]
@@ -60,5 +60,5 @@ fn test_cli_overrides() {
     let config = AppConfig::load(None, args).expect("Failed to load config with CLI args");
 
     assert_eq!(config.qbittorrent_host, "cli_host");
-    assert_eq!(config.qbittorrent_port, 9999);
+    assert_eq!(config.qbittorrent_port, Some(9999));
 }

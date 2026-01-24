@@ -24,9 +24,9 @@ async fn test_real_instance_connectivity() {
     println!("Testing connectivity to: {}", base_url);
 
     let client = if let (Some(u), Some(p)) = (username, password) {
-        QBitClient::new(base_url, u, p)
+        QBitClient::new(base_url, u, p, false)
     } else {
-        QBitClient::new_no_auth(base_url)
+        QBitClient::new_no_auth(base_url, false)
     };
 
     // Try to login if we have creds

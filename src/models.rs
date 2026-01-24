@@ -187,6 +187,15 @@ pub struct PeerLogEntry {
     pub reason: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BuildInfo {
+    pub qt: String,
+    pub libtorrent: String,
+    pub boost: String,
+    pub openssl: String,
+    pub bitness: i64,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

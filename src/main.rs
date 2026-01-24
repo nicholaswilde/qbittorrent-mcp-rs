@@ -1,58 +1,12 @@
-use clap::Parser;
 use qbittorrent_mcp_rs::config::AppConfig;
 use std::env;
-use tracing::{Level, error, info};
-use tracing_subscriber::FmtSubscriber;
-
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Args {
-    /// Path to configuration file
-    #[arg(short, long)]
-    config: Option<String>,
-
-    /// qBittorrent Host
-    #[arg(long)]
-    qbittorrent_host: Option<String>,
-
-    /// qBittorrent Port
-    #[arg(long)]
-    qbittorrent_port: Option<u16>,
-
-    /// Server Mode (stdio or http)
-    #[arg(long)]
-    server_mode: Option<String>,
-
-    /// qBittorrent Username
-    #[arg(long)]
-    qbittorrent_username: Option<String>,
-
-    /// qBittorrent Password
-    #[arg(long)]
-    qbittorrent_password: Option<String>,
-
-    /// Lazy mode (show fewer tools initially)
-    #[arg(long, action)]
-    lazy: bool,
-}
+use tracing::{error, info};
+use tracing_appender::non_blocking::WorkerGuard;
+use tracing_appender::rolling::{RollingFileAppender, Rotation};
+use tracing_subscriber::{EnvFilter, Layer, layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() {
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::INFO)
-        .finish();
-
-    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
-
-    // We need to pass args to AppConfig::load.
-    // AppConfig::load expects Vec<String> for clap parsing inside it,
-    // OR we can refactor AppConfig to take parsed args or just use the Args struct here
-    // and pass values to AppConfig.
-    // However, AppConfig::load currently duplicates the clap logic for the sake of "loading config".
-    // It's better if `AppConfig::load` handles the merging logic.
-    // `AppConfig::load` calls `parse_args` internally.
-    // So we just collect env::args().
-
     match run().await {
         Ok(_) => {}
         Err(e) => {
@@ -64,65 +18,112 @@ async fn main() {
 
 async fn run() -> anyhow::Result<()> {
     let args: Vec<String> = env::args().collect();
-
-    // Simple pre-parse to find config file if possible, or we let AppConfig handle it.
-    // I'll update AppConfig to handle --config.
-
     let config = AppConfig::load(None, args)?;
+
+    // Keep guard alive for the duration of the program
+    let _guard = init_logging(&config);
 
     info!(
         "Starting qBittorrent MCP Server in {} mode (lazy: {})",
         config.server_mode, config.lazy_mode
     );
-    info!(
-        "Connecting to qBittorrent at {}:{}",
-        config.qbittorrent_host, config.qbittorrent_port
-    );
-    info!("Press Ctrl+C to stop");
 
     use qbittorrent_mcp_rs::client::QBitClient;
-    use qbittorrent_mcp_rs::server::{MCPServer, http::HttpServer, stdio::StdioServer};
+    use qbittorrent_mcp_rs::server::http::run_http_server;
+    use qbittorrent_mcp_rs::server::mcp::McpServer;
 
     let base_url = if config.qbittorrent_host.starts_with("http://")
         || config.qbittorrent_host.starts_with("https://")
     {
-        config.qbittorrent_host.clone()
+        if let Some(port) = config.qbittorrent_port {
+            format!("{}:{}", config.qbittorrent_host, port)
+        } else {
+            config.qbittorrent_host.clone()
+        }
     } else {
-        format!(
-            "http://{}:{}",
-            config.qbittorrent_host, config.qbittorrent_port
-        )
+        let port = config.qbittorrent_port.unwrap_or(80);
+        format!("http://{}:{}", config.qbittorrent_host, port)
     };
+
+    info!("Connecting to qBittorrent at {}", base_url);
+    info!("Press Ctrl+C to stop");
+
+    let no_verify_ssl = config.no_verify_ssl && base_url.starts_with("https://");
 
     let client =
         if let (Some(u), Some(p)) = (&config.qbittorrent_username, &config.qbittorrent_password) {
-            QBitClient::new(base_url, u, p)
+            QBitClient::new(base_url, u, p, no_verify_ssl)
         } else {
-            QBitClient::new_no_auth(base_url)
+            QBitClient::new_no_auth(base_url, no_verify_ssl)
         };
-
-    // We should probably login immediately to verify creds?
-    // Or let the tools do it. Tools should probably ensure login.
-    // For now, we assume client logic handles it (stateless or re-login).
-    // QBitClient::login needs to be called.
-    // Let's call login if auth is provided.
 
     if config.qbittorrent_username.is_some() {
         if let Err(e) = client.login().await {
             error!("Failed to login to qBittorrent: {}", e);
-            // Should we exit? Maybe just warn.
         } else {
             info!("Logged in to qBittorrent successfully");
         }
     }
 
-    let server: Box<dyn MCPServer> = match config.server_mode.as_str() {
-        "http" => Box::new(HttpServer::new(3000, client)),
-        _ => Box::new(StdioServer::new(client, config.lazy_mode)),
-    };
+    let mut server = McpServer::new(client, config.lazy_mode);
 
-    server.run().await.map_err(|e| anyhow::anyhow!(e))?;
+    match config.server_mode.as_str() {
+        "http" => {
+            // Hardcoded port 3000 for now as it was in the original main.rs
+            run_http_server(server, "0.0.0.0", 3000, config.http_auth_token).await?;
+        }
+        _ => {
+            server.run_stdio().await?;
+        }
+    };
 
     info!("Shutting down qBittorrent MCP Server");
     Ok(())
+}
+
+fn init_logging(config: &AppConfig) -> Option<WorkerGuard> {
+    let filter_layer =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(&config.log_level));
+
+    let stdout_layer = tracing_subscriber::fmt::layer()
+        .with_writer(std::io::stderr)
+        .with_filter(filter_layer.clone());
+
+    let (file_layer, guard) = if config.log_file_enable {
+        let rotation = match config.log_rotate.to_lowercase().as_str() {
+            "hourly" => Rotation::HOURLY,
+            "never" => Rotation::NEVER,
+            _ => Rotation::DAILY,
+        };
+
+        let file_appender = RollingFileAppender::builder()
+            .rotation(rotation)
+            .filename_prefix(&config.log_filename)
+            .build(&config.log_dir)
+            .expect("Failed to create log file appender");
+
+        let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
+
+        (
+            Some(
+                tracing_subscriber::fmt::layer()
+                    .with_writer(non_blocking)
+                    .with_ansi(false)
+                    .with_filter(filter_layer),
+            ),
+            Some(guard),
+        )
+    } else {
+        (None, None)
+    };
+
+    let registry = tracing_subscriber::registry().with(stdout_layer);
+
+    if let Some(layer) = file_layer {
+        registry.with(layer).init();
+    } else {
+        registry.init();
+    }
+
+    guard
 }

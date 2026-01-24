@@ -6,7 +6,7 @@ use wiremock::{Mock, MockServer, ResponseTemplate};
 #[tokio::test]
 async fn test_rss_operations() -> Result<()> {
     let mock_server = MockServer::start().await;
-    let client = QBitClient::new_no_auth(mock_server.uri());
+    let client = QBitClient::new_no_auth(mock_server.uri(), false);
 
     // Add Feed
     Mock::given(method("POST"))

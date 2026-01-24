@@ -150,10 +150,21 @@ Before marking any task complete, verify:
 
 ### Before Committing
 ```bash
-# Example: Commands to run all pre-commit checks (e.g., format, lint, type check, run tests)
-# e.g., for a Node.js project: npm run check
-# e.g., for a Go project: make check (if a Makefile exists)
+# Run the CI suite (format, lint, tests)
+task test:ci
 ```
+
+## Automated Verification
+
+After ALL code changes, the AI agent MUST run:
+```bash
+task test:ci
+```
+Any errors (formatting, linting, or test failures) MUST be fixed before the task is considered complete.
+
+## Documentation Mandate
+
+All documentation (README, API docs, etc.) MUST be updated immediately after any new feature is committed or existing functionality is significantly changed.
 
 ## Testing Requirements
 
@@ -249,7 +260,7 @@ A task is complete when:
 1. All code implemented to specification
 2. Unit tests written and passing
 3. Code coverage meets project requirements
-4. Documentation complete (if applicable)
+4. **All documentation (README, internal docs, etc.) is updated to reflect new features**
 5. Code passes all configured linting and static analysis checks
 6. Works beautifully on mobile (if applicable)
 7. Implementation notes added to `plan.md`

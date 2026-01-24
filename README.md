@@ -14,19 +14,21 @@ A [Model Context Protocol (MCP) server](https://modelcontextprotocol.io/docs/get
 - **:card_file_box: Torrent Management**:
     - List all torrents with status, progress, and speed.
     - Add torrents via Magnet URIs or HTTP URLs.
-    - Pause, resume, and delete torrents.
+    - Pause, resume, delete, reannounce, and recheck torrents.
 - **:mag: Torrent Inspection**:
     - List files contained within a torrent.
     - Retrieve detailed properties (save path, creation date, seeds/peers, etc.).
 - **:traffic_light: Global Control**:
     - Monitor global download/upload speeds and limits.
     - Set global download and upload speed limits.
+    - Toggle alternative speed limits.
 - **:label: Categories & Tags**:
     - Organize torrents using categories and tags.
     - Create categories with dedicated save paths.
 - **:sleeping: Lazy Mode**: Reduce token usage by hiding advanced tools until explicitly requested.
 - **:gear: Configuration**: TOML, YAML, JSON, or CLI arguments.
-- **:rocket: Transports**: Stdio (default) and HTTP (SSE).
+- **:rocket: Transports**: Stdio (default) and HTTP (SSE with optional token auth).
+- **:books: Resources**: Expose live torrent lists, transfer info, and categories as MCP resources.
 
 ## :hammer_and_wrench: Available Tools
 
@@ -46,6 +48,8 @@ The server exposes the following tools to the LLM, categorized by functionality:
 - `pause_torrent`: Pause one or more torrents (use `|` to separate multiple hashes).
 - `resume_torrent`: Resume one or more torrents (use `|` to separate multiple hashes).
 - `delete_torrent`: Delete one or more torrents, optionally deleting downloaded files.
+- `reannounce_torrent`: Reannounce one or more torrents to trackers.
+- `recheck_torrent`: Recheck (verify) one or more torrents.
 
 ### :mag: Torrent Inspection
 - `get_torrent_files`: List all files inside a specific torrent.
@@ -54,6 +58,9 @@ The server exposes the following tools to the LLM, categorized by functionality:
 ### :traffic_light: Global Control
 - `get_global_transfer_info`: Get global download/upload speeds, data usage, and limits.
 - `set_global_transfer_limits`: Set global download and/or upload speed limits (in bytes per second).
+- `toggle_alternative_speed_limits`: Toggle alternative speed limits mode.
+- `get_speed_limits_mode`: Get the current state of alternative speed limits (0: disabled, 1: enabled).
+- `ban_peers`: Ban a list of peers (host:port, pipe-separated).
 - `get_app_preferences`: Retrieve all application preferences (full configuration).
 - `set_app_preferences`: Update application preferences using a JSON string.
 
@@ -77,7 +84,18 @@ The server exposes the following tools to the LLM, categorized by functionality:
 - `get_peer_log`: Retrieve the peer connection log.
 
 ### :desktop_computer: System Tools
+- `get_app_version`: Get qBittorrent application version.
+- `get_build_info`: Get qBittorrent build information (Qt, Libtorrent, etc.).
+- `shutdown_app`: Shutdown the qBittorrent application.
 - `show_all_tools`: Enable all available tools when running in `--lazy` mode.
+
+## :books: Resources
+
+The server exposes the following resources:
+
+- `qbittorrent://torrents`: Live list of all torrents (JSON).
+- `qbittorrent://transfer`: Global transfer statistics and limits (JSON).
+- `qbittorrent://categories`: List of all defined categories (JSON).
 
 ## :gear: Installation
 
@@ -99,11 +117,13 @@ Configuration is loaded from `config.{toml,yaml,json}` in the current directory,
 
 ```toml
 qbittorrent_host = "localhost" # or https://your-instance.com
-qbittorrent_port = 8080
+# qbittorrent_port = 8080      # Optional. Defaults to 80 for http, 443 for https.
 qbittorrent_username = "admin"
 qbittorrent_password = "password"
-server_mode = "stdio" # or "http"
-lazy_mode = false # or true to hide complex tools initially
+server_mode = "stdio"          # or "http"
+lazy_mode = false              # or true to hide complex tools initially
+no_verify_ssl = false          # or true to disable SSL verification
+# http_auth_token = "secret"   # Optional token for HTTP mode
 ```
 
 ### CLI Arguments
@@ -121,6 +141,13 @@ CLI arguments override configuration file settings.
 - `--qbittorrent-password <pass>`: Password.
 - `--server-mode <mode>`: `stdio` or `http`.
 - `--lazy`: Enable lazy mode (shows only essential tools initially to save tokens).
+- `--no-verify-ssl`: Disable SSL certificate verification (insecure).
+- `--http-auth-token <token>`: Authentication token for HTTP mode.
+- `--log-level <level>`: Log level (error, warn, info, debug, trace).
+- `--log-file-enable`: Enable logging to a file.
+- `--log-dir <dir>`: Log file directory.
+- `--log-filename <name>`: Log filename prefix.
+- `--log-rotate <strategy>`: Log rotation strategy (daily, hourly, never).
 
 ## :computer: Usage
 

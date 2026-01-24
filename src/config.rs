@@ -5,11 +5,18 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize, Clone)]
 pub struct AppConfig {
     pub qbittorrent_host: String,
-    pub qbittorrent_port: u16,
+    pub qbittorrent_port: Option<u16>,
     pub qbittorrent_username: Option<String>,
     pub qbittorrent_password: Option<String>,
     pub server_mode: String,
     pub lazy_mode: bool,
+    pub no_verify_ssl: bool,
+    pub log_level: String,
+    pub log_file_enable: bool,
+    pub log_dir: String,
+    pub log_filename: String,
+    pub log_rotate: String,
+    pub http_auth_token: Option<String>,
 }
 
 impl AppConfig {
@@ -27,9 +34,14 @@ impl AppConfig {
         // 2. Set Defaults
         builder = builder
             .set_default("qbittorrent_host", "localhost")?
-            .set_default("qbittorrent_port", 8080)?
             .set_default("server_mode", "stdio")?
-            .set_default("lazy_mode", false)?;
+            .set_default("lazy_mode", false)?
+            .set_default("no_verify_ssl", false)?
+            .set_default("log_level", "info")?
+            .set_default("log_file_enable", false)?
+            .set_default("log_dir", ".")?
+            .set_default("log_filename", "qbittorrent-mcp-rs.log")?
+            .set_default("log_rotate", "daily")?;
 
         // 3. Load from File
         if let Some(path) = path_to_load {
@@ -45,8 +57,8 @@ impl AppConfig {
         if let Some(host) = matches.get_one::<String>("qbittorrent_host") {
             builder = builder.set_override("qbittorrent_host", host.as_str())?;
         }
-        if let Some(port) = matches.get_one::<String>("qbittorrent_port") {
-            builder = builder.set_override("qbittorrent_port", port.as_str())?;
+        if let Some(port) = matches.get_one::<u16>("qbittorrent_port") {
+            builder = builder.set_override("qbittorrent_port", *port)?;
         }
         if let Some(mode) = matches.get_one::<String>("server_mode") {
             builder = builder.set_override("server_mode", mode.as_str())?;
@@ -59,6 +71,27 @@ impl AppConfig {
         }
         if matches.get_flag("lazy_mode") {
             builder = builder.set_override("lazy_mode", true)?;
+        }
+        if matches.get_flag("no_verify_ssl") {
+            builder = builder.set_override("no_verify_ssl", true)?;
+        }
+        if let Some(level) = matches.get_one::<String>("log_level") {
+            builder = builder.set_override("log_level", level.as_str())?;
+        }
+        if matches.get_flag("log_file_enable") {
+            builder = builder.set_override("log_file_enable", true)?;
+        }
+        if let Some(dir) = matches.get_one::<String>("log_dir") {
+            builder = builder.set_override("log_dir", dir.as_str())?;
+        }
+        if let Some(filename) = matches.get_one::<String>("log_filename") {
+            builder = builder.set_override("log_filename", filename.as_str())?;
+        }
+        if let Some(rotate) = matches.get_one::<String>("log_rotate") {
+            builder = builder.set_override("log_rotate", rotate.as_str())?;
+        }
+        if let Some(token) = matches.get_one::<String>("http_auth_token") {
+            builder = builder.set_override("http_auth_token", token.as_str())?;
         }
 
         builder.build()?.try_deserialize()
@@ -83,7 +116,8 @@ fn parse_args(args: Vec<String>) -> ArgMatches {
         .arg(
             Arg::new("qbittorrent_port")
                 .long("qbittorrent-port")
-                .help("Port of the qBittorrent Web UI"),
+                .help("Port of the qBittorrent Web UI")
+                .value_parser(clap::value_parser!(u16)),
         )
         .arg(
             Arg::new("server_mode")
@@ -105,6 +139,48 @@ fn parse_args(args: Vec<String>) -> ArgMatches {
                 .long("lazy")
                 .action(ArgAction::SetTrue)
                 .help("Enable lazy mode (show fewer tools initially)"),
+        )
+        .arg(
+            Arg::new("no_verify_ssl")
+                .long("no-verify-ssl")
+                .action(ArgAction::SetTrue)
+                .help("Disable SSL certificate verification (insecure)"),
+        )
+        .arg(
+            Arg::new("log_level")
+                .short('L')
+                .long("log-level")
+                .help("Log level (error, warn, info, debug, trace)")
+                .default_value("info"),
+        )
+        .arg(
+            Arg::new("log_file_enable")
+                .long("log-file-enable")
+                .action(ArgAction::SetTrue)
+                .help("Enable logging to a file"),
+        )
+        .arg(
+            Arg::new("log_dir")
+                .long("log-dir")
+                .help("Log file directory")
+                .default_value("."),
+        )
+        .arg(
+            Arg::new("log_filename")
+                .long("log-filename")
+                .help("Log filename prefix")
+                .default_value("qbittorrent-mcp-rs.log"),
+        )
+        .arg(
+            Arg::new("log_rotate")
+                .long("log-rotate")
+                .help("Log rotation strategy (daily, hourly, never)")
+                .default_value("daily"),
+        )
+        .arg(
+            Arg::new("http_auth_token")
+                .long("http-auth-token")
+                .help("Authentication token for HTTP server mode"),
         );
 
     if args.is_empty() {

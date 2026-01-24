@@ -6,7 +6,7 @@ use wiremock::{Mock, MockServer, ResponseTemplate};
 #[tokio::test]
 async fn test_category_operations() -> Result<()> {
     let mock_server = MockServer::start().await;
-    let client = QBitClient::new_no_auth(mock_server.uri());
+    let client = QBitClient::new_no_auth(mock_server.uri(), false);
 
     // Get Categories
     Mock::given(method("GET"))
@@ -43,7 +43,7 @@ async fn test_category_operations() -> Result<()> {
 #[tokio::test]
 async fn test_tags_operations() -> Result<()> {
     let mock_server = MockServer::start().await;
-    let client = QBitClient::new_no_auth(mock_server.uri());
+    let client = QBitClient::new_no_auth(mock_server.uri(), false);
 
     Mock::given(method("POST"))
         .and(path("/api/v2/torrents/addTags"))

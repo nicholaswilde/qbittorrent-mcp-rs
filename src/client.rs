@@ -14,10 +14,12 @@ impl QBitClient {
         base_url: impl Into<String>,
         username: impl Into<String>,
         password: impl Into<String>,
+        no_verify_ssl: bool,
     ) -> Self {
         // Enable cookie store for session management (SID)
         let http = Client::builder()
             .cookie_store(true)
+            .danger_accept_invalid_certs(no_verify_ssl)
             .build()
             .expect("Failed to build HTTP client");
 
@@ -29,9 +31,10 @@ impl QBitClient {
         }
     }
 
-    pub fn new_no_auth(base_url: impl Into<String>) -> Self {
+    pub fn new_no_auth(base_url: impl Into<String>, no_verify_ssl: bool) -> Self {
         let http = Client::builder()
             .cookie_store(true)
+            .danger_accept_invalid_certs(no_verify_ssl)
             .build()
             .expect("Failed to build HTTP client");
 
@@ -163,6 +166,32 @@ impl QBitClient {
         }
     }
 
+    pub async fn reannounce_torrents(&self, hashes: &str) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/reannounce", self.base_url);
+        let params = [("hashes", hashes)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to reannounce torrents: {}", resp.status()))
+        }
+    }
+
+    pub async fn recheck_torrents(&self, hashes: &str) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/recheck", self.base_url);
+        let params = [("hashes", hashes)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to recheck torrents: {}", resp.status()))
+        }
+    }
+
     pub async fn get_torrent_files(&self, hash: &str) -> Result<Vec<crate::models::TorrentFile>> {
         let url = format!("{}/api/v2/torrents/files?hash={}", self.base_url, hash);
 
@@ -234,6 +263,35 @@ impl QBitClient {
             Ok(())
         } else {
             Err(anyhow!("Failed to set upload limit: {}", resp.status()))
+        }
+    }
+
+    pub async fn toggle_alternative_speed_limits(&self) -> Result<()> {
+        let url = format!("{}/api/v2/transfer/toggleSpeedLimitsMode", self.base_url);
+        let resp = self.http.post(&url).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!(
+                "Failed to toggle alternative speed limits: {}",
+                resp.status()
+            ))
+        }
+    }
+
+    pub async fn get_speed_limits_mode(&self) -> Result<i64> {
+        let url = format!("{}/api/v2/transfer/speedLimitsMode", self.base_url);
+        let resp = self.http.get(&url).send().await?;
+
+        if resp.status().is_success() {
+            let mode = resp.text().await?.parse()?;
+            Ok(mode)
+        } else {
+            Err(anyhow!(
+                "Failed to get speed limits mode: {}",
+                resp.status()
+            ))
         }
     }
 
@@ -524,6 +582,41 @@ impl QBitClient {
         }
     }
 
+    pub async fn get_app_version(&self) -> Result<String> {
+        let url = format!("{}/api/v2/app/version", self.base_url);
+        let resp = self.http.get(&url).send().await?;
+
+        if resp.status().is_success() {
+            let version = resp.text().await?;
+            Ok(version)
+        } else {
+            Err(anyhow!("Failed to get app version: {}", resp.status()))
+        }
+    }
+
+    pub async fn get_build_info(&self) -> Result<crate::models::BuildInfo> {
+        let url = format!("{}/api/v2/app/buildInfo", self.base_url);
+        let resp = self.http.get(&url).send().await?;
+
+        if resp.status().is_success() {
+            let info = resp.json::<crate::models::BuildInfo>().await?;
+            Ok(info)
+        } else {
+            Err(anyhow!("Failed to get build info: {}", resp.status()))
+        }
+    }
+
+    pub async fn shutdown_app(&self) -> Result<()> {
+        let url = format!("{}/api/v2/app/shutdown", self.base_url);
+        let resp = self.http.post(&url).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to shutdown app: {}", resp.status()))
+        }
+    }
+
     pub async fn get_main_log(
         &self,
         normal: bool,
@@ -566,6 +659,19 @@ impl QBitClient {
             Ok(logs)
         } else {
             Err(anyhow!("Failed to get peer log: {}", resp.status()))
+        }
+    }
+
+    pub async fn ban_peers(&self, peers: &str) -> Result<()> {
+        let url = format!("{}/api/v2/transfer/banPeers", self.base_url);
+        let params = [("peers", peers)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to ban peers: {}", resp.status()))
         }
     }
 }

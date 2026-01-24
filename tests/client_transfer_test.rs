@@ -6,7 +6,7 @@ use wiremock::{Mock, MockServer, ResponseTemplate};
 #[tokio::test]
 async fn test_get_global_transfer_info() -> Result<()> {
     let mock_server = MockServer::start().await;
-    let client = QBitClient::new_no_auth(mock_server.uri());
+    let client = QBitClient::new_no_auth(mock_server.uri(), false);
 
     let json_response = r#"{
         "dl_info_speed": 1024,
@@ -35,7 +35,7 @@ async fn test_get_global_transfer_info() -> Result<()> {
 #[tokio::test]
 async fn test_set_transfer_limits() -> Result<()> {
     let mock_server = MockServer::start().await;
-    let client = QBitClient::new_no_auth(mock_server.uri());
+    let client = QBitClient::new_no_auth(mock_server.uri(), false);
 
     Mock::given(method("POST"))
         .and(path("/api/v2/transfer/setDownloadLimit"))
