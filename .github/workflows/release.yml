@@ -60,28 +60,11 @@ jobs:
         run: |
           gh release create ${{ github.ref_name }} --draft --prerelease --verify-tag --title ${{ steps.get_version.outputs.version }}
 
-  generate-assets:
-    name: generate-assets
-    needs: [ci]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-      - name: Generate Assets
-        run: cargo run --example gen_manual
-      - name: Upload Assets
-        uses: actions/upload-artifact@v6
-        with:
-          name: assets
-          path: assets/
-
   build-release:
     name: build-release
-    needs: ['create-release', 'generate-assets']
+    needs: ['create-release']
     runs-on: ${{ matrix.os }}
+
     env:
       # For some builds, we use cross to test on 32-bit and big-endian
       # systems.
@@ -229,12 +212,6 @@ jobs:
           "ghcr.io/cross-rs/${{ matrix.target }}:main" \
           -c "apt-get update && apt-get install -y binutils-arm-linux-gnueabihf && ${{ matrix.strip }} /$BIN"
 
-    - name: Download Assets
-      uses: actions/download-artifact@v7
-      with:
-        name: assets
-        path: assets/
-
     - name: Build archive
       shell: bash
       run: |
@@ -253,11 +230,6 @@ jobs:
         # Copy other files
         cp {README.md,LICENSE,config.toml.example} "$staging/"
         
-        # Copy Assets
-        if [ -d "assets" ]; then
-          cp -r assets/* "$staging/"
-        fi
-
         # Compress
         if [ "${{ matrix.os }}" = "windows-latest" ]; then
           7z a "$staging.zip" "$staging"
