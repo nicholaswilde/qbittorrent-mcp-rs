@@ -1,16 +1,16 @@
 # Implementation Plan - Core Foundation
 
-## Phase 1: Project Skeleton & Configuration
+## Phase 1: Project Skeleton & Configuration [checkpoint: a081498]
 
-- [ ] Task: Initialize Rust project and dependencies
-    - [ ] Initialize new cargo project
-    - [ ] Add dependencies (`tokio`, `reqwest`, `serde`, `serde_json`, `anyhow`, `tracing`, `clap`, `config`, `axum`, `tower-http`) to `Cargo.toml`
-    - [ ] Set up basic logging (tracing-subscriber)
-- [ ] Task: Implement Configuration Loading
-    - [ ] Write Tests: Create `tests/config_test.rs` to verify loading from TOML, YAML, and JSON, and verify CLI argument overrides
-    - [ ] Implement `Config` struct and loading logic using the `config` crate (merging default, file, env vars, and CLI arguments via `clap`)
-    - [ ] Verify Tests Pass
-- [ ] Task: Conductor - User Manual Verification 'Project Skeleton & Configuration' (Protocol in workflow.md)
+- [x] Task: Initialize Rust project and dependencies
+    - [x] Initialize new cargo project
+    - [x] Add dependencies (`tokio`, `reqwest`, `serde`, `serde_json`, `anyhow`, `tracing`, `clap`, `config`, `axum`, `tower-http`) to `Cargo.toml`
+    - [x] Set up basic logging (tracing-subscriber)
+- [x] Task: Implement Configuration Loading
+    - [x] Write Tests: Create `tests/config_test.rs` to verify loading from TOML, YAML, and JSON, and verify CLI argument overrides
+    - [x] Implement `Config` struct and loading logic using the `config` crate (merging default, file, env vars, and CLI arguments via `clap`)
+    - [x] Verify Tests Pass
+- [x] Task: Conductor - User Manual Verification 'Project Skeleton & Configuration' (Protocol in workflow.md)
 
 ## Phase 2: qBittorrent Client (Internal API v2.8.3)
 
