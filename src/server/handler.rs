@@ -230,10 +230,68 @@ impl ServerHandler for AppHandler {
                         annotations: None,
                     };
 
+                    let install_plugin_tool = Tool {
+                        name: "install_search_plugin".to_string(),
+                        description: "Install a search plugin".to_string(),
+                        input_schema: Some(ToolSchema {
+                            properties: Some(json!({
+                                "url": { "type": "string", "description": "URL to the plugin file" }
+                            })),
+                            required: Some(vec!["url".to_string()]),
+                        }),
+                        annotations: None,
+                    };
+
+                    let uninstall_plugin_tool = Tool {
+                        name: "uninstall_search_plugin".to_string(),
+                        description: "Uninstall a search plugin".to_string(),
+                        input_schema: Some(ToolSchema {
+                            properties: Some(json!({
+                                "name": { "type": "string", "description": "Name of the plugin" }
+                            })),
+                            required: Some(vec!["name".to_string()]),
+                        }),
+                        annotations: None,
+                    };
+
+                    let enable_plugin_tool = Tool {
+                        name: "enable_search_plugin".to_string(),
+                        description: "Enable or disable a search plugin".to_string(),
+                        input_schema: Some(ToolSchema {
+                            properties: Some(json!({
+                                "name": { "type": "string", "description": "Name of the plugin" },
+                                "enable": { "type": "boolean", "description": "True to enable, False to disable" }
+                            })),
+                            required: Some(vec!["name".to_string(), "enable".to_string()]),
+                        }),
+                        annotations: None,
+                    };
+
+                    let update_plugins_tool = Tool {
+                        name: "update_search_plugins".to_string(),
+                        description: "Update all search plugins".to_string(),
+                        input_schema: Some(ToolSchema {
+                            properties: Some(json!({})),
+                            required: None,
+                        }),
+                        annotations: None,
+                    };
+
+                    let get_plugins_tool = Tool {
+                        name: "get_search_plugins".to_string(),
+                        description: "List installed search plugins".to_string(),
+                        input_schema: Some(ToolSchema {
+                            properties: Some(json!({})),
+                            required: None,
+                        }),
+                        annotations: None,
+                    };
+
                     tools.extend(vec![
                         search_tool, add_tool, pause_tool, resume_tool, delete_tool, 
                         files_tool, props_tool, transfer_tool, set_limits_tool,
-                        create_cat_tool, set_cat_tool, get_cats_tool, add_tags_tool
+                        create_cat_tool, set_cat_tool, get_cats_tool, add_tags_tool,
+                        install_plugin_tool, uninstall_plugin_tool, enable_plugin_tool, update_plugins_tool, get_plugins_tool
                     ]);
                 }
 
@@ -432,6 +490,52 @@ impl ServerHandler for AppHandler {
 
                     Ok(json!({
                         "content": [{ "type": "text", "text": "Tags added successfully" }],
+                        "isError": false
+                    }))
+                } else if name == "install_search_plugin" {
+                    let args = arguments.ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing arguments"))?;
+                    let url = args.get("url").and_then(|v| v.as_str()).ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing url"))?;
+
+                    self.client.install_search_plugin(url).await.map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+
+                    Ok(json!({
+                        "content": [{ "type": "text", "text": "Search plugin installed successfully" }],
+                        "isError": false
+                    }))
+                } else if name == "uninstall_search_plugin" {
+                    let args = arguments.ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing arguments"))?;
+                    let plugin_name = args.get("name").and_then(|v| v.as_str()).ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing name"))?;
+
+                    self.client.uninstall_search_plugin(plugin_name).await.map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+
+                    Ok(json!({
+                        "content": [{ "type": "text", "text": "Search plugin uninstalled successfully" }],
+                        "isError": false
+                    }))
+                } else if name == "enable_search_plugin" {
+                    let args = arguments.ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing arguments"))?;
+                    let plugin_name = args.get("name").and_then(|v| v.as_str()).ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing name"))?;
+                    let enable = args.get("enable").and_then(|v| v.as_bool()).ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing enable"))?;
+
+                    self.client.enable_search_plugin(plugin_name, enable).await.map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+
+                    Ok(json!({
+                        "content": [{ "type": "text", "text": "Search plugin status updated successfully" }],
+                        "isError": false
+                    }))
+                } else if name == "update_search_plugins" {
+                    self.client.update_search_plugins().await.map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+
+                    Ok(json!({
+                        "content": [{ "type": "text", "text": "Search plugins updated successfully" }],
+                        "isError": false
+                    }))
+                } else if name == "get_search_plugins" {
+                    let plugins = self.client.get_search_plugins().await.map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+                    let text = serde_json::to_string_pretty(&plugins).map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+
+                    Ok(json!({
+                        "content": [{ "type": "text", "text": text }],
                         "isError": false
                     }))
                 } else if name == "show_all_tools" {

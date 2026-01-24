@@ -328,4 +328,66 @@ impl QBitClient {
             Err(anyhow!("Failed to add tags: {}", resp.status()))
         }
     }
+
+    pub async fn get_search_plugins(&self) -> Result<Vec<crate::models::SearchPlugin>> {
+        let url = format!("{}/api/v2/search/plugins", self.base_url);
+        let resp = self.http.get(&url).send().await?;
+
+        if resp.status().is_success() {
+            let plugins = resp.json().await?;
+            Ok(plugins)
+        } else {
+            Err(anyhow!("Failed to get search plugins: {}", resp.status()))
+        }
+    }
+
+    pub async fn install_search_plugin(&self, url_source: &str) -> Result<()> {
+        let url = format!("{}/api/v2/search/installPlugin", self.base_url);
+        let params = [("sources", url_source)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to install search plugin: {}", resp.status()))
+        }
+    }
+
+    pub async fn uninstall_search_plugin(&self, name: &str) -> Result<()> {
+        let url = format!("{}/api/v2/search/uninstallPlugin", self.base_url);
+        let params = [("names", name)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to uninstall search plugin: {}", resp.status()))
+        }
+    }
+
+    pub async fn enable_search_plugin(&self, name: &str, enable: bool) -> Result<()> {
+        let url = format!("{}/api/v2/search/enablePlugin", self.base_url);
+        let params = [("names", name), ("enable", if enable { "true" } else { "false" })];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to toggle search plugin: {}", resp.status()))
+        }
+    }
+
+    pub async fn update_search_plugins(&self) -> Result<()> {
+        let url = format!("{}/api/v2/search/updatePlugins", self.base_url);
+        let resp = self.http.post(&url).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to update search plugins: {}", resp.status()))
+        }
+    }
 }

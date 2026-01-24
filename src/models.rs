@@ -130,6 +130,17 @@ pub struct Category {
     pub save_path: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SearchPlugin {
+    pub name: String,
+    #[serde(rename = "fullName")]
+    pub full_name: String,
+    pub version: String,
+    pub url: Option<String>,
+    pub supported_categories: Vec<String>,
+    pub enabled: bool,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

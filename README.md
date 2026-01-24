@@ -105,6 +105,11 @@ The server exposes the following tools to the LLM, categorized by functionality:
 
 ### Search
 - `search_torrents`: Search for torrents using qBittorrent's search engine (waits 5 seconds for results).
+- `install_search_plugin`: Install a new search plugin (URL).
+- `uninstall_search_plugin`: Uninstall a search plugin (Name).
+- `enable_search_plugin`: Enable/Disable a search plugin.
+- `update_search_plugins`: Update all search plugins.
+- `get_search_plugins`: List installed search plugins.
 
 ### Torrent Management
 - `list_torrents`: List all torrents with their status and progress.
