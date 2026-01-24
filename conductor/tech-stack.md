@@ -9,6 +9,7 @@
 
 ## Communication & API
 - **JSON-RPC:** The underlying protocol for MCP communication.
+- **qBittorrent Web UI API (v2.8.3):** Targeted API version for all qBittorrent interactions.
 - **reqwest:** For making asynchronous HTTP requests to the qBittorrent Web UI API.
 - **axum:** For the HTTP server implementation.
 

@@ -6,7 +6,7 @@ To establish a functional MCP server in Rust that can connect to a qBittorrent i
 ## Core Features
 1.  **Dual Mode MCP Server:** A running process that can operate in either `stdio` mode (for CLI/Agent integration) or `http` mode (SSE/Post).
 2.  **Configuration System:** Support for loading settings from `config.toml`, `config.yaml`, or `config.json`. The system must allow all options to be overridden by command-line arguments.
-3.  **qBittorrent Client:** An internal Rust module that manages authentication and HTTP requests to the qBittorrent Web UI API.
+3.  **qBittorrent Client:** An internal Rust module that manages authentication and HTTP requests to the qBittorrent Web UI API (v2.8.3).
 4.  **Tool: `list_torrents`:** An MCP tool that, when invoked, returns a JSON list of torrents (name, state, progress) from the qBittorrent server.
 
 ## Architecture
