@@ -141,6 +141,34 @@ pub struct SearchPlugin {
     pub enabled: bool,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RssItem {
+    pub title: String,
+    pub url: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RssFeed {
+    pub uid: String,
+    pub url: String,
+    pub title: String,
+    pub last_build_date: Option<String>,
+    pub items: Vec<RssItem>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RssRule {
+    pub enabled: bool,
+    pub must_contain: String,
+    pub must_not_contain: String,
+    pub use_regex: bool,
+    pub episode_filter: String,
+    pub smart_episode_filter: bool,
+    pub assign_category: String,
+    pub add_paused: Option<bool>,
+    pub save_path: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

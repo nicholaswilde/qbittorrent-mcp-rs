@@ -56,7 +56,9 @@ async fn test_search_plugins() -> Result<()> {
     assert_eq!(plugins.len(), 1);
     assert_eq!(plugins[0].name, "legit_torrents");
 
-    client.install_search_plugin("http://example.com/plugin.py").await?;
+    client
+        .install_search_plugin("http://example.com/plugin.py")
+        .await?;
     client.enable_search_plugin("legit_torrents", false).await?;
     client.update_search_plugins().await?;
     client.uninstall_search_plugin("legit_torrents").await?;

@@ -66,7 +66,7 @@ impl AppConfig {
 }
 
 fn parse_args(args: Vec<String>) -> ArgMatches {
-    use clap::{Arg, Command, ArgAction};
+    use clap::{Arg, ArgAction, Command};
 
     let cmd = Command::new("qbittorrent-mcp-rs")
         .arg(

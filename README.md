@@ -132,6 +132,12 @@ The server exposes the following tools to the LLM, categorized by functionality:
 - `get_categories`: List all available categories.
 - `add_torrent_tags`: Add tags to one or more torrents.
 
+### RSS Management
+- `add_rss_feed`: Add a new RSS feed.
+- `get_rss_feeds`: List all RSS feeds and their items.
+- `set_rss_rule`: Create or update an RSS auto-download rule.
+- `get_rss_rules`: List all RSS auto-download rules.
+
 ### System Tools
 - `show_all_tools`: Enable all available tools when running in `--lazy` mode.
 

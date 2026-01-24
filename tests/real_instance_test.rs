@@ -3,7 +3,13 @@ use std::env;
 
 #[tokio::test]
 async fn test_real_instance_connectivity() {
-    let host = env::var("QBIT_HOST").unwrap_or_else(|_| "localhost".to_string());
+    let host = match env::var("QBIT_HOST") {
+        Ok(h) => h,
+        Err(_) => {
+            println!("Skipping real instance test: QBIT_HOST not set");
+            return;
+        }
+    };
     let port = env::var("QBIT_PORT").unwrap_or_else(|_| "8080".to_string());
     let username = env::var("QBIT_USERNAME").ok();
     let password = env::var("QBIT_PASSWORD").ok();
@@ -61,7 +67,9 @@ async fn test_real_instance_connectivity() {
                             if cats.contains_key("mcp_test_category") {
                                 println!("Verified 'mcp_test_category' exists in category list");
                             } else {
-                                println!("WARNING: 'mcp_test_category' not found in list immediately after creation");
+                                println!(
+                                    "WARNING: 'mcp_test_category' not found in list immediately after creation"
+                                );
                             }
                         }
                         Err(e) => println!("Failed to get categories: {}", e),
@@ -91,7 +99,12 @@ async fn test_real_instance_connectivity() {
                         tokio::time::sleep(std::time::Duration::from_secs(2)).await;
                         match client.get_search_results(id, None, None).await {
                             Ok(resp) => {
-                                println!("Poll {}: Status '{}', Found {} results", i+1, resp.status, resp.total);
+                                println!(
+                                    "Poll {}: Status '{}', Found {} results",
+                                    i + 1,
+                                    resp.status,
+                                    resp.total
+                                );
                                 if resp.status == "Stopped" || resp.total > 0 {
                                     if !resp.results.is_empty() {
                                         println!("First result: {}", resp.results[0].file_name);

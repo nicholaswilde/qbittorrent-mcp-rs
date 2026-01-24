@@ -15,10 +15,18 @@ async fn test_add_torrent() -> Result<()> {
         .await;
 
     // Test minimal arguments
-    client.add_torrent("magnet:?xt=urn:btih:test", None, None).await?;
-    
+    client
+        .add_torrent("magnet:?xt=urn:btih:test", None, None)
+        .await?;
+
     // Test with optional arguments
-    client.add_torrent("magnet:?xt=urn:btih:test2", Some("/downloads"), Some("linux")).await?;
+    client
+        .add_torrent(
+            "magnet:?xt=urn:btih:test2",
+            Some("/downloads"),
+            Some("linux"),
+        )
+        .await?;
 
     Ok(())
 }

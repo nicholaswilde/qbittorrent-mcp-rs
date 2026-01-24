@@ -163,7 +163,10 @@ impl QBitClient {
         }
     }
 
-    pub async fn get_torrent_properties(&self, hash: &str) -> Result<crate::models::TorrentProperties> {
+    pub async fn get_torrent_properties(
+        &self,
+        hash: &str,
+    ) -> Result<crate::models::TorrentProperties> {
         let url = format!("{}/api/v2/torrents/properties?hash={}", self.base_url, hash);
 
         let resp = self.http.get(&url).send().await?;
@@ -172,7 +175,10 @@ impl QBitClient {
             let props = resp.json::<crate::models::TorrentProperties>().await?;
             Ok(props)
         } else {
-            Err(anyhow!("Failed to get torrent properties: {}", resp.status()))
+            Err(anyhow!(
+                "Failed to get torrent properties: {}",
+                resp.status()
+            ))
         }
     }
 
@@ -185,7 +191,10 @@ impl QBitClient {
             let info = resp.json::<crate::models::TransferInfo>().await?;
             Ok(info)
         } else {
-            Err(anyhow!("Failed to get global transfer info: {}", resp.status()))
+            Err(anyhow!(
+                "Failed to get global transfer info: {}",
+                resp.status()
+            ))
         }
     }
 
@@ -232,7 +241,12 @@ impl QBitClient {
         }
     }
 
-    pub async fn get_search_results(&self, id: i64, limit: Option<i64>, offset: Option<i64>) -> Result<crate::models::SearchResultsResponse> {
+    pub async fn get_search_results(
+        &self,
+        id: i64,
+        limit: Option<i64>,
+        offset: Option<i64>,
+    ) -> Result<crate::models::SearchResultsResponse> {
         let url = format!("{}/api/v2/search/results", self.base_url);
         let mut params = vec![("id", id.to_string())];
         if let Some(l) = limit {
@@ -278,7 +292,9 @@ impl QBitClient {
         }
     }
 
-    pub async fn get_categories(&self) -> Result<std::collections::HashMap<String, crate::models::Category>> {
+    pub async fn get_categories(
+        &self,
+    ) -> Result<std::collections::HashMap<String, crate::models::Category>> {
         let url = format!("{}/api/v2/torrents/categories", self.base_url);
         let resp = self.http.get(&url).send().await?;
 
@@ -350,7 +366,10 @@ impl QBitClient {
         if resp.status().is_success() {
             Ok(())
         } else {
-            Err(anyhow!("Failed to install search plugin: {}", resp.status()))
+            Err(anyhow!(
+                "Failed to install search plugin: {}",
+                resp.status()
+            ))
         }
     }
 
@@ -363,13 +382,19 @@ impl QBitClient {
         if resp.status().is_success() {
             Ok(())
         } else {
-            Err(anyhow!("Failed to uninstall search plugin: {}", resp.status()))
+            Err(anyhow!(
+                "Failed to uninstall search plugin: {}",
+                resp.status()
+            ))
         }
     }
 
     pub async fn enable_search_plugin(&self, name: &str, enable: bool) -> Result<()> {
         let url = format!("{}/api/v2/search/enablePlugin", self.base_url);
-        let params = [("names", name), ("enable", if enable { "true" } else { "false" })];
+        let params = [
+            ("names", name),
+            ("enable", if enable { "true" } else { "false" }),
+        ];
 
         let resp = self.http.post(&url).form(&params).send().await?;
 
@@ -387,7 +412,77 @@ impl QBitClient {
         if resp.status().is_success() {
             Ok(())
         } else {
-            Err(anyhow!("Failed to update search plugins: {}", resp.status()))
+            Err(anyhow!(
+                "Failed to update search plugins: {}",
+                resp.status()
+            ))
+        }
+    }
+
+    pub async fn add_rss_feed(&self, url_feed: &str, path: &str) -> Result<()> {
+        let url = format!("{}/api/v2/rss/addFeed", self.base_url);
+        let params = [("url", url_feed), ("path", path)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to add RSS feed: {}", resp.status()))
+        }
+    }
+
+    pub async fn remove_rss_item(&self, path: &str) -> Result<()> {
+        let url = format!("{}/api/v2/rss/removeItem", self.base_url);
+        let params = [("path", path)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to remove RSS item: {}", resp.status()))
+        }
+    }
+
+    pub async fn get_all_rss_feeds(
+        &self,
+    ) -> Result<std::collections::HashMap<String, serde_json::Value>> {
+        let url = format!("{}/api/v2/rss/allFeeds", self.base_url);
+        let resp = self.http.get(&url).send().await?;
+
+        if resp.status().is_success() {
+            let feeds = resp.json().await?;
+            Ok(feeds)
+        } else {
+            Err(anyhow!("Failed to get RSS feeds: {}", resp.status()))
+        }
+    }
+
+    pub async fn set_rss_rule(&self, name: &str, definition: &str) -> Result<()> {
+        let url = format!("{}/api/v2/rss/setRule", self.base_url);
+        let params = [("ruleName", name), ("ruleDef", definition)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to set RSS rule: {}", resp.status()))
+        }
+    }
+
+    pub async fn get_all_rss_rules(
+        &self,
+    ) -> Result<std::collections::HashMap<String, crate::models::RssRule>> {
+        let url = format!("{}/api/v2/rss/allRules", self.base_url);
+        let resp = self.http.get(&url).send().await?;
+
+        if resp.status().is_success() {
+            let rules = resp.json().await?;
+            Ok(rules)
+        } else {
+            Err(anyhow!("Failed to get RSS rules: {}", resp.status()))
         }
     }
 }
