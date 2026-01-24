@@ -96,8 +96,32 @@ impl ServerHandler for AppHandler {
                     annotations: None,
                 };
 
+                let files_tool = Tool {
+                    name: "get_torrent_files".to_string(),
+                    description: "Get file list of a torrent".to_string(),
+                    input_schema: Some(ToolSchema {
+                        properties: Some(json!({
+                            "hash": { "type": "string", "description": "Torrent hash" }
+                        })),
+                        required: Some(vec!["hash".to_string()]),
+                    }),
+                    annotations: None,
+                };
+
+                let props_tool = Tool {
+                    name: "get_torrent_properties".to_string(),
+                    description: "Get properties of a torrent".to_string(),
+                    input_schema: Some(ToolSchema {
+                        properties: Some(json!({
+                            "hash": { "type": "string", "description": "Torrent hash" }
+                        })),
+                        required: Some(vec!["hash".to_string()]),
+                    }),
+                    annotations: None,
+                };
+
                 Ok(json!({
-                    "tools": [list_tool, add_tool, pause_tool, resume_tool, delete_tool]
+                    "tools": [list_tool, add_tool, pause_tool, resume_tool, delete_tool, files_tool, props_tool]
                 }))
             }
             "tools/call" => {
@@ -171,6 +195,28 @@ impl ServerHandler for AppHandler {
 
                     Ok(json!({
                         "content": [{ "type": "text", "text": "Torrent deleted successfully" }],
+                        "isError": false
+                    }))
+                } else if name == "get_torrent_files" {
+                    let args = arguments.ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing arguments"))?;
+                    let hash = args.get("hash").and_then(|v| v.as_str()).ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing hash"))?;
+
+                    let files = self.client.get_torrent_files(hash).await.map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+                    let text = serde_json::to_string_pretty(&files).map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+
+                    Ok(json!({
+                        "content": [{ "type": "text", "text": text }],
+                        "isError": false
+                    }))
+                } else if name == "get_torrent_properties" {
+                    let args = arguments.ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing arguments"))?;
+                    let hash = args.get("hash").and_then(|v| v.as_str()).ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing hash"))?;
+
+                    let props = self.client.get_torrent_properties(hash).await.map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+                    let text = serde_json::to_string_pretty(&props).map_err(|e| McpError::protocol(ErrorCode::InternalError, e.to_string()))?;
+
+                    Ok(json!({
+                        "content": [{ "type": "text", "text": text }],
                         "isError": false
                     }))
                 } else {

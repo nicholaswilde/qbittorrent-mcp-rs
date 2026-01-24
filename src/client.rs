@@ -149,4 +149,30 @@ impl QBitClient {
             Err(anyhow!("Failed to delete torrents: {}", resp.status()))
         }
     }
+
+    pub async fn get_torrent_files(&self, hash: &str) -> Result<Vec<crate::models::TorrentFile>> {
+        let url = format!("{}/api/v2/torrents/files?hash={}", self.base_url, hash);
+
+        let resp = self.http.get(&url).send().await?;
+
+        if resp.status().is_success() {
+            let files = resp.json::<Vec<crate::models::TorrentFile>>().await?;
+            Ok(files)
+        } else {
+            Err(anyhow!("Failed to get torrent files: {}", resp.status()))
+        }
+    }
+
+    pub async fn get_torrent_properties(&self, hash: &str) -> Result<crate::models::TorrentProperties> {
+        let url = format!("{}/api/v2/torrents/properties?hash={}", self.base_url, hash);
+
+        let resp = self.http.get(&url).send().await?;
+
+        if resp.status().is_success() {
+            let props = resp.json::<crate::models::TorrentProperties>().await?;
+            Ok(props)
+        } else {
+            Err(anyhow!("Failed to get torrent properties: {}", resp.status()))
+        }
+    }
 }

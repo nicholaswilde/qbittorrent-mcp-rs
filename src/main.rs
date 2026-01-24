@@ -79,10 +79,15 @@ async fn run() -> anyhow::Result<()> {
     use qbittorrent_mcp_rs::client::QBitClient;
     use qbittorrent_mcp_rs::server::{MCPServer, http::HttpServer, stdio::StdioServer};
 
-    let base_url = format!(
-        "http://{}:{}",
-        config.qbittorrent_host, config.qbittorrent_port
-    );
+    let base_url = if config.qbittorrent_host.starts_with("http://") || config.qbittorrent_host.starts_with("https://") {
+        config.qbittorrent_host.clone()
+    } else {
+        format!(
+            "http://{}:{}",
+            config.qbittorrent_host, config.qbittorrent_port
+        )
+    };
+
     let client =
         if let (Some(u), Some(p)) = (&config.qbittorrent_username, &config.qbittorrent_password) {
             QBitClient::new(base_url, u, p)

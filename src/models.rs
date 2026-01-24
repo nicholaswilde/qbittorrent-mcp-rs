@@ -29,6 +29,53 @@ pub struct Torrent {
     pub force_start: bool,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TorrentFile {
+    pub index: i64,
+    pub name: String,
+    pub size: i64,
+    pub progress: f64,
+    pub priority: i64,
+    pub is_seed: Option<bool>,
+    pub piece_range: Option<Vec<i64>>,
+    pub availability: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TorrentProperties {
+    pub save_path: String,
+    pub creation_date: i64,
+    pub piece_size: i64,
+    pub comment: String,
+    pub total_wasted: i64,
+    pub total_uploaded: i64,
+    pub total_downloaded: i64,
+    pub up_limit: i64,
+    pub dl_limit: i64,
+    pub time_elapsed: i64,
+    pub seeding_time: i64,
+    pub nb_connections: i64,
+    pub nb_connections_limit: i64,
+    pub share_ratio: f64,
+    pub addition_date: i64,
+    pub completion_date: i64,
+    pub created_by: String,
+    pub dl_speed_avg: i64,
+    pub dl_speed: i64,
+    pub eta: i64,
+    pub last_seen: i64,
+    pub peers: i64,
+    pub peers_total: i64,
+    pub pieces_have: i64,
+    pub pieces_num: i64,
+    pub reannounce: i64,
+    pub seeds: i64,
+    pub seeds_total: i64,
+    pub total_size: i64,
+    pub up_speed_avg: i64,
+    pub up_speed: i64,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
