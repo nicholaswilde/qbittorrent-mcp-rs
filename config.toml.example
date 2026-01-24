@@ -1,0 +1,19 @@
+# qBittorrent MCP Server Configuration Example
+
+# The host of the qBittorrent Web UI. 
+# Can be an IP address, a hostname, or a full URL (http/https).
+qbittorrent_host = "localhost"
+
+# The port of the qBittorrent Web UI. Default is 8080.
+qbittorrent_port = 8080
+
+# qBittorrent Web UI Username.
+# qbittorrent_username = "admin"
+
+# qBittorrent Web UI Password.
+# qbittorrent_password = "password"
+
+# Server mode: "stdio" or "http".
+# "stdio" is used for direct integration with local MCP clients (e.g., Claude Desktop).
+# "http" starts an SSE server on port 3000.
+server_mode = "stdio"
