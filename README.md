@@ -1,5 +1,11 @@
 # :cloud: qBittorrent MCP Server (Rust)
 
+[![task](https://img.shields.io/badge/Task-Enabled-brightgreen?style=for-the-badge&logo=task&logoColor=white)](https://taskfile.dev/#/)
+[![ci](https://img.shields.io/github/actions/workflow/status/nicholaswilde/qbittorrent-mcp-rs/ci.yml?label=ci&style=for-the-badge&branch=main)](https://github.com/nicholaswilde/qbittorrent-mcp-rs/actions/workflows/ci.yml)
+
+> [!WARNING]
+> This project is currently in active development (v0.x.x) and is **not production-ready**. Features may change, and breaking changes may occur without notice.
+
 A Model Context Protocol (MCP) server for qBittorrent, written in Rust. This tool empowers AI agents to interact with and manage your qBittorrent instance using natural language.
 
 ## :sparkles: Features
@@ -150,6 +156,16 @@ The server exposes the following tools to the LLM, categorized by functionality:
 ### :desktop: System Tools
 - `show_all_tools`: Enable all available tools when running in `--lazy` mode.
 
+## :handshake: Contributing
+
+Contributions are welcome! Please see [CONTRIBUTING.md](.github/CONTRIBUTING.md) for guidelines.
+
 ## :balance_scale: License
 
-MIT
+​[​Apache License 2.0](https://raw.githubusercontent.com/nicholaswilde/qbittorrent-mcp-rs/refs/heads/main/LICENSE)
+
+## :writing_hand: Author
+
+​This project was started in 2026 by [Nicholas Wilde][2].
+
+[2]: <https://github.com/nicholaswilde/>
