@@ -4,6 +4,7 @@ A Model Context Protocol (MCP) server for qBittorrent, written in Rust. This too
 
 ## Features
 
+- **Search**: Search for torrents using qBittorrent's built-in search engine plugins.
 - **Torrent Management**:
     - List all torrents with status, progress, and speed.
     - Add torrents via Magnet URIs or HTTP URLs.
@@ -14,6 +15,10 @@ A Model Context Protocol (MCP) server for qBittorrent, written in Rust. This too
 - **Global Control**:
     - Monitor global download/upload speeds and limits.
     - Set global download and upload speed limits.
+- **Categories & Tags**:
+    - Organize torrents using categories and tags.
+    - Create categories with dedicated save paths.
+- **Lazy Mode**: Reduce token usage by hiding advanced tools until explicitly requested.
 - **Configuration**: TOML, YAML, JSON, or CLI arguments.
 - **Transports**: Stdio (default) and HTTP (SSE).
 
