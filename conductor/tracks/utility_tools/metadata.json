@@ -1,0 +1,7 @@
+{
+    "id": "utility_tools",
+    "name": "Utility Tools",
+    "description": "Implement helper tools for AI agent workflow optimization (e.g., waiting for status).",
+    "status": "active",
+    "created_at": "2026-01-23"
+}

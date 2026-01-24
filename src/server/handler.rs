@@ -333,6 +333,21 @@ impl ServerHandler for AppHandler {
                         annotations: None,
                     };
 
+                    let wait_tool = Tool {
+                        name: "wait_for_torrent_status".to_string(),
+                        description: "Poll a torrent until it reaches a desired state or timeout"
+                            .to_string(),
+                        input_schema: Some(ToolSchema {
+                            properties: Some(json!({
+                                "hash": { "type": "string", "description": "Torrent hash" },
+                                "target_status": { "type": "string", "description": "Status to wait for (e.g., uploading, stalledUP)" },
+                                "timeout_seconds": { "type": "integer", "description": "Max wait time (default 60, max 300)" }
+                            })),
+                            required: Some(vec!["hash".to_string(), "target_status".to_string()]),
+                        }),
+                        annotations: None,
+                    };
+
                     tools.extend(vec![
                         search_tool,
                         add_tool,
@@ -356,6 +371,7 @@ impl ServerHandler for AppHandler {
                         get_rss_feeds_tool,
                         set_rss_rule_tool,
                         get_rss_rules_tool,
+                        wait_tool,
                     ]);
                 }
 
@@ -848,6 +864,54 @@ impl ServerHandler for AppHandler {
                     Ok(json!({
                         "content": [{ "type": "text", "text": text }],
                         "isError": false
+                    }))
+                } else if name == "wait_for_torrent_status" {
+                    let args = arguments.ok_or(McpError::protocol(
+                        ErrorCode::InvalidParams,
+                        "Missing arguments",
+                    ))?;
+                    let hash = args
+                        .get("hash")
+                        .and_then(|v| v.as_str())
+                        .ok_or(McpError::protocol(ErrorCode::InvalidParams, "Missing hash"))?;
+                    let target_status = args.get("target_status").and_then(|v| v.as_str()).ok_or(
+                        McpError::protocol(ErrorCode::InvalidParams, "Missing target_status"),
+                    )?;
+                    let timeout = args
+                        .get("timeout_seconds")
+                        .and_then(|v| v.as_i64())
+                        .unwrap_or(60);
+                    let timeout = timeout.clamp(1, 300);
+
+                    let mut current_status = String::new();
+                    let start_time = std::time::Instant::now();
+
+                    while start_time.elapsed().as_secs() < timeout as u64 {
+                        let torrents = self.client.get_torrents_info(hash).await.map_err(|e| {
+                            McpError::protocol(ErrorCode::InternalError, e.to_string())
+                        })?;
+
+                        if let Some(t) = torrents.first() {
+                            current_status = t.state.clone();
+                            if current_status == target_status {
+                                return Ok(json!({
+                                    "content": [{ "type": "text", "text": format!("Torrent reached target status: {}", target_status) }],
+                                    "isError": false
+                                }));
+                            }
+                        } else {
+                            return Err(McpError::protocol(
+                                ErrorCode::InvalidParams,
+                                format!("Torrent not found: {}", hash),
+                            ));
+                        }
+
+                        sleep(Duration::from_secs(2)).await;
+                    }
+
+                    Ok(json!({
+                        "content": [{ "type": "text", "text": format!("Timed out waiting for status {}. Current status: {}", target_status, current_status) }],
+                        "isError": true
                     }))
                 } else if name == "show_all_tools" {
                     self.lazy_mode.store(false, Ordering::Relaxed);

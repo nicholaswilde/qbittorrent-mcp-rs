@@ -82,3 +82,46 @@ async fn test_get_torrent_list() {
     assert_eq!(torrents.len(), 1);
     assert_eq!(torrents[0].name, "Ubuntu Linux");
 }
+
+#[tokio::test]
+async fn test_get_torrents_info() {
+    let mock_server = MockServer::start().await;
+
+    let json_response = r#"[
+        {
+            "hash": "hash1",
+            "name": "Test",
+            "size": 1000,
+            "progress": 1.0,
+            "dlspeed": 0,
+            "upspeed": 0,
+            "priority": 1,
+            "num_seeds": 1,
+            "num_leechs": 0,
+            "num_incomplete": 0,
+            "num_complete": 1,
+            "ratio": 1.0,
+            "eta": 0,
+            "state": "uploading",
+            "seq_dl": false,
+            "f_l_piece_prio": false,
+            "category": "",
+            "tags": "",
+            "super_seeding": false,
+            "force_start": false
+        }
+    ]"#;
+
+    Mock::given(method("GET"))
+        .and(path("/api/v2/torrents/info"))
+        .and(wiremock::matchers::query_param("hashes", "hash1"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(json_response))
+        .mount(&mock_server)
+        .await;
+
+    let client = QBitClient::new_no_auth(mock_server.uri());
+    let torrents = client.get_torrents_info("hash1").await.unwrap();
+
+    assert_eq!(torrents.len(), 1);
+    assert_eq!(torrents[0].state, "uploading");
+}

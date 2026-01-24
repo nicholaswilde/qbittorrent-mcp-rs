@@ -138,6 +138,9 @@ The server exposes the following tools to the LLM, categorized by functionality:
 - `set_rss_rule`: Create or update an RSS auto-download rule.
 - `get_rss_rules`: List all RSS auto-download rules.
 
+### Utility Tools
+- `wait_for_torrent_status`: Poll a torrent until it reaches a desired state (e.g., "uploading") or timeout. Useful for sequential automation without constant polling from the agent.
+
 ### System Tools
 - `show_all_tools`: Enable all available tools when running in `--lazy` mode.
 

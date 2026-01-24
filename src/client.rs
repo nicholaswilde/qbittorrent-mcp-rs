@@ -81,6 +81,19 @@ impl QBitClient {
         }
     }
 
+    pub async fn get_torrents_info(&self, hashes: &str) -> Result<Vec<crate::models::Torrent>> {
+        let url = format!("{}/api/v2/torrents/info?hashes={}", self.base_url, hashes);
+
+        let resp = self.http.get(&url).send().await?;
+
+        if resp.status().is_success() {
+            let torrents = resp.json::<Vec<crate::models::Torrent>>().await?;
+            Ok(torrents)
+        } else {
+            Err(anyhow!("Failed to get torrents info: {}", resp.status()))
+        }
+    }
+
     pub async fn add_torrent(
         &self,
         urls: &str,
