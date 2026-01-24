@@ -1,4 +1,4 @@
-# :cloud: qBittorrent MCP Server (Rust)
+# :magnet: qBittorrent MCP Server (Rust) :robot:
 
 [![task](https://img.shields.io/badge/Task-Enabled-brightgreen?style=for-the-badge&logo=task&logoColor=white)](https://taskfile.dev/#/)
 [![ci](https://img.shields.io/github/actions/workflow/status/nicholaswilde/qbittorrent-mcp-rs/ci.yml?label=ci&style=for-the-badge&branch=main)](https://github.com/nicholaswilde/qbittorrent-mcp-rs/actions/workflows/ci.yml)
@@ -6,12 +6,12 @@
 > [!WARNING]
 > This project is currently in active development (v0.x.x) and is **not production-ready**. Features may change, and breaking changes may occur without notice.
 
-A Model Context Protocol (MCP) server for qBittorrent, written in Rust. This tool empowers AI agents to interact with and manage your qBittorrent instance using natural language.
+A [Model Context Protocol (MCP) server](https://modelcontextprotocol.io/docs/getting-started/intro) for [qBittorrent](https://www.qbittorrent.org/), written in Rust. This tool empowers AI agents to interact with and manage your qBittorrent instance using natural language.
 
 ## :sparkles: Features
 
-- **:search: Search**: Search for torrents using qBittorrent's built-in search engine plugins.
-- **:files: Torrent Management**:
+- **:globe_with_meridians: Search**: Search for torrents using qBittorrent's built-in search engine plugins.
+- **:card_file_box: Torrent Management**:
     - List all torrents with status, progress, and speed.
     - Add torrents via Magnet URIs or HTTP URLs.
     - Pause, resume, and delete torrents.
@@ -28,7 +28,58 @@ A Model Context Protocol (MCP) server for qBittorrent, written in Rust. This too
 - **:gear: Configuration**: TOML, YAML, JSON, or CLI arguments.
 - **:rocket: Transports**: Stdio (default) and HTTP (SSE).
 
-## :downloader: Installation
+## :hammer_and_wrench: Available Tools
+
+The server exposes the following tools to the LLM, categorized by functionality:
+
+### :globe_with_meridians: Search
+- `search_torrents`: Search for torrents using qBittorrent's search engine (waits 5 seconds for results).
+- `install_search_plugin`: Install a new search plugin (URL).
+- `uninstall_search_plugin`: Uninstall a search plugin (Name).
+- `enable_search_plugin`: Enable/Disable a search plugin.
+- `update_search_plugins`: Update all search plugins.
+- `get_search_plugins`: List installed search plugins.
+
+### :card_file_box: Torrent Management
+- `list_torrents`: List all torrents with their status and progress.
+- `add_torrent`: Add a new torrent via Magnet URI or HTTP URL.
+- `pause_torrent`: Pause one or more torrents (use `|` to separate multiple hashes).
+- `resume_torrent`: Resume one or more torrents (use `|` to separate multiple hashes).
+- `delete_torrent`: Delete one or more torrents, optionally deleting downloaded files.
+
+### :mag: Torrent Inspection
+- `get_torrent_files`: List all files inside a specific torrent.
+- `get_torrent_properties`: Get detailed technical properties of a torrent (save path, seeds, peers, etc.).
+
+### :traffic_light: Global Control
+- `get_global_transfer_info`: Get global download/upload speeds, data usage, and limits.
+- `set_global_transfer_limits`: Set global download and/or upload speed limits (in bytes per second).
+- `get_app_preferences`: Retrieve all application preferences (full configuration).
+- `set_app_preferences`: Update application preferences using a JSON string.
+
+### :label: Categories & Tags
+- `create_category`: Create a new category with a save path.
+- `set_torrent_category`: Assign a category to one or more torrents.
+- `get_categories`: List all available categories.
+- `add_torrent_tags`: Add tags to one or more torrents.
+
+### :wireless: RSS Management
+- `add_rss_feed`: Add a new RSS feed.
+- `get_rss_feeds`: List all RSS feeds and their items.
+- `set_rss_rule`: Create or update an RSS auto-download rule.
+- `get_rss_rules`: List all RSS auto-download rules.
+
+### :toolbox: Utility Tools
+- `wait_for_torrent_status`: Poll a torrent until it reaches a desired state (e.g., "uploading") or timeout. Useful for sequential automation without constant polling from the agent.
+
+### :scroll: System Logs
+- `get_main_log`: Retrieve the main application log (filter by severity).
+- `get_peer_log`: Retrieve the peer connection log.
+
+### :desktop_computer: System Tools
+- `show_all_tools`: Enable all available tools when running in `--lazy` mode.
+
+## :gear: Installation
 
 ### From Source
 
@@ -104,57 +155,6 @@ Add this to your `claude_desktop_config.json`:
 Server will listen on port 3000.
 - SSE Endpoint: `http://localhost:3000/sse`
 - Message Endpoint: `http://localhost:3000/message`
-
-## :hammer_and_wrench: Available Tools
-
-The server exposes the following tools to the LLM, categorized by functionality:
-
-### :search: Search
-- `search_torrents`: Search for torrents using qBittorrent's search engine (waits 5 seconds for results).
-- `install_search_plugin`: Install a new search plugin (URL).
-- `uninstall_search_plugin`: Uninstall a search plugin (Name).
-- `enable_search_plugin`: Enable/Disable a search plugin.
-- `update_search_plugins`: Update all search plugins.
-- `get_search_plugins`: List installed search plugins.
-
-### :files: Torrent Management
-- `list_torrents`: List all torrents with their status and progress.
-- `add_torrent`: Add a new torrent via Magnet URI or HTTP URL.
-- `pause_torrent`: Pause one or more torrents (use `|` to separate multiple hashes).
-- `resume_torrent`: Resume one or more torrents (use `|` to separate multiple hashes).
-- `delete_torrent`: Delete one or more torrents, optionally deleting downloaded files.
-
-### :mag: Torrent Inspection
-- `get_torrent_files`: List all files inside a specific torrent.
-- `get_torrent_properties`: Get detailed technical properties of a torrent (save path, seeds, peers, etc.).
-
-### :traffic_light: Global Control
-- `get_global_transfer_info`: Get global download/upload speeds, data usage, and limits.
-- `set_global_transfer_limits`: Set global download and/or upload speed limits (in bytes per second).
-- `get_app_preferences`: Retrieve all application preferences (full configuration).
-- `set_app_preferences`: Update application preferences using a JSON string.
-
-### :label: Categories & Tags
-- `create_category`: Create a new category with a save path.
-- `set_torrent_category`: Assign a category to one or more torrents.
-- `get_categories`: List all available categories.
-- `add_torrent_tags`: Add tags to one or more torrents.
-
-### :rss: RSS Management
-- `add_rss_feed`: Add a new RSS feed.
-- `get_rss_feeds`: List all RSS feeds and their items.
-- `set_rss_rule`: Create or update an RSS auto-download rule.
-- `get_rss_rules`: List all RSS auto-download rules.
-
-### :toolbox: Utility Tools
-- `wait_for_torrent_status`: Poll a torrent until it reaches a desired state (e.g., "uploading") or timeout. Useful for sequential automation without constant polling from the agent.
-
-### :scroll: System Logs
-- `get_main_log`: Retrieve the main application log (filter by severity).
-- `get_peer_log`: Retrieve the peer connection log.
-
-### :desktop: System Tools
-- `show_all_tools`: Enable all available tools when running in `--lazy` mode.
 
 ## :handshake: Contributing
 
