@@ -12,21 +12,21 @@
     - [x] Verify Tests Pass
 - [x] Task: Conductor - User Manual Verification 'Project Skeleton & Configuration' (Protocol in workflow.md)
 
-## Phase 2: qBittorrent Client (Internal API v2.8.3)
+## Phase 2: qBittorrent Client (Internal API v2.8.3) [checkpoint: a8531f0]
 
-- [ ] Task: Define Torrent Data Models
-    - [ ] Create `src/models.rs`
-    - [ ] Define `Torrent` struct with `serde` derivation based on API v2.8.3 specs
-    - [ ] Write unit tests for JSON deserialization (using sample qBittorrent API response)
-- [ ] Task: Implement Authentication Flow
-    - [ ] Write Tests: Mock `reqwest` response to test login handling (SID-based)
-    - [ ] Implement `QBitClient::new` and `login` method
-    - [ ] Verify Tests Pass
-- [ ] Task: Implement `get_torrent_list`
-    - [ ] Write Tests: Mock `reqwest` response for `/api/v2/torrents/info` following v2.8.3 schema
-    - [ ] Implement `get_torrent_list` method in `QBitClient`
-    - [ ] Verify Tests Pass
-- [ ] Task: Conductor - User Manual Verification 'qBittorrent Client (Internal API)' (Protocol in workflow.md)
+- [x] Task: Define Torrent Data Models
+    - [x] Create `src/models.rs`
+    - [x] Define `Torrent` struct with `serde` derivation based on API v2.8.3 specs
+    - [x] Write unit tests for JSON deserialization (using sample qBittorrent API response)
+- [x] Task: Implement Authentication Flow
+    - [x] Write Tests: Mock `reqwest` response to test login handling (SID-based)
+    - [x] Implement `QBitClient::new` and `login` method
+    - [x] Verify Tests Pass
+- [x] Task: Implement `get_torrent_list`
+    - [x] Write Tests: Mock `reqwest` response for `/api/v2/torrents/info` following v2.8.3 schema
+    - [x] Implement `get_torrent_list` method in `QBitClient`
+    - [x] Verify Tests Pass
+- [x] Task: Conductor - User Manual Verification 'qBittorrent Client (Internal API)' (Protocol in workflow.md)
 
 ## Phase 3: MCP Server Integration (Dual Mode)
 
