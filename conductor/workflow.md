@@ -262,6 +262,13 @@ When creating a git tag, the `-m` command argument shall be used to add a commen
 git tag -a v1.0.0 -m "Release v1.0.0: Initial stable release"
 ```
 
+## GitHub Release Summary Guidelines
+
+When printing a GitHub release summary, the following rules apply:
+- **Emoji Shortcodes:** Use emoji shortcodes (e.g., `:rocket:`, `:bug:`, `:sparkles:`) to categorize and highlight changes.
+- **Markdown Formatting:** Use standard Markdown formatting. For code snippets or configuration examples, use code blocks with triple ticks (```).
+- **No Line Numbers:** Do not include line numbers in the summary or code blocks.
+
 ## Definition of Done
 
 A task is complete when:
