@@ -253,6 +253,15 @@ git commit -m "test(comments): Add tests for emoji reaction limits"
 git commit -m "style(mobile): Improve button touch targets"
 ```
 
+## Tagging Guidelines
+
+When creating a git tag, the `-m` command argument shall be used to add a comment (annotated tag).
+
+### Examples
+```bash
+git tag -a v1.0.0 -m "Release v1.0.0: Initial stable release"
+```
+
 ## Definition of Done
 
 A task is complete when:
@@ -305,7 +314,7 @@ A task is complete when:
 
 ### Deployment Steps
 1. Merge feature branch to main
-2. Tag release with version
+2. Tag release with version (e.g., `git tag -a v1.0.0 -m "Release v1.0.0"`)
 3. Push to deployment service
 4. Run database migrations
 5. Verify deployment
