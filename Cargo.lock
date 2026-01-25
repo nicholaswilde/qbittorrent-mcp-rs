@@ -1399,7 +1399,7 @@ dependencies = [
 
 [[package]]
 name = "qbittorrent-mcp-rs"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1408,6 +1408,7 @@ dependencies = [
  "config",
  "dashmap",
  "futures",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",

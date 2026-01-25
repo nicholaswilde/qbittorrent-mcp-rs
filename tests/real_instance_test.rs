@@ -36,7 +36,9 @@ async fn test_real_instance_connectivity() {
         println!("Login failed or not attempted");
     }
 
-    let result = client.get_torrent_list().await;
+    let result = client
+        .get_torrent_list(None, None, None, None, None, None, None)
+        .await;
     match result {
         Ok(torrents) => {
             println!("Successfully retrieved {} torrents", torrents.len());

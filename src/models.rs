@@ -21,6 +21,8 @@ pub struct Torrent {
     pub ratio: f64,
     pub eta: i64,
     pub state: String,
+    pub added_on: i64,
+    pub completion_on: i64,
     pub seq_dl: bool,
     pub f_l_piece_prio: bool,
     pub category: String,
@@ -74,6 +76,18 @@ pub struct TorrentProperties {
     pub total_size: i64,
     pub up_speed_avg: i64,
     pub up_speed: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Tracker {
+    pub url: String,
+    pub status: i64, // 0: Disabled, 1: Not contacted, 2: Working, 3: Updating, 4: Not working
+    pub tier: i64,
+    pub num_peers: i64,
+    pub num_seeds: i64,
+    pub num_leeches: i64,
+    pub num_downloaded: i64,
+    pub msg: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -194,6 +208,19 @@ pub struct BuildInfo {
     pub boost: String,
     pub openssl: String,
     pub bitness: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SyncMainData {
+    pub rid: i64,
+    pub full_update: Option<bool>,
+    pub torrents: Option<std::collections::HashMap<String, serde_json::Value>>,
+    pub torrents_removed: Option<Vec<String>>,
+    pub categories: Option<std::collections::HashMap<String, Category>>,
+    pub categories_removed: Option<Vec<String>>,
+    pub tags: Option<Vec<String>>,
+    pub tags_removed: Option<Vec<String>>,
+    pub server_state: Option<serde_json::Value>,
 }
 
 #[cfg(test)]

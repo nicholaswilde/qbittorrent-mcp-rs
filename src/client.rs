@@ -71,10 +71,44 @@ impl QBitClient {
         }
     }
 
-    pub async fn get_torrent_list(&self) -> Result<Vec<crate::models::Torrent>> {
-        let url = format!("{}/api/v2/torrents/info", self.base_url);
+    #[allow(clippy::too_many_arguments)]
+    pub async fn get_torrent_list(
+        &self,
+        filter: Option<&str>,
+        category: Option<&str>,
+        tag: Option<&str>,
+        sort: Option<&str>,
+        reverse: Option<bool>,
+        limit: Option<i64>,
+        offset: Option<i64>,
+    ) -> Result<Vec<crate::models::Torrent>> {
+        let mut url = url::Url::parse(&format!("{}/api/v2/torrents/info", self.base_url))?;
+        {
+            let mut query = url.query_pairs_mut();
+            if let Some(f) = filter {
+                query.append_pair("filter", f);
+            }
+            if let Some(c) = category {
+                query.append_pair("category", c);
+            }
+            if let Some(t) = tag {
+                query.append_pair("tag", t);
+            }
+            if let Some(s) = sort {
+                query.append_pair("sort", s);
+            }
+            if let Some(r) = reverse {
+                query.append_pair("reverse", &r.to_string());
+            }
+            if let Some(l) = limit {
+                query.append_pair("limit", &l.to_string());
+            }
+            if let Some(o) = offset {
+                query.append_pair("offset", &o.to_string());
+            }
+        }
 
-        let resp = self.http.get(&url).send().await?;
+        let resp = self.http.get(url).send().await?;
 
         if resp.status().is_success() {
             let torrents = resp.json::<Vec<crate::models::Torrent>>().await?;
@@ -221,6 +255,19 @@ impl QBitClient {
                 "Failed to get torrent properties: {}",
                 resp.status()
             ))
+        }
+    }
+
+    pub async fn get_torrent_trackers(&self, hash: &str) -> Result<Vec<crate::models::Tracker>> {
+        let url = format!("{}/api/v2/torrents/trackers?hash={}", self.base_url, hash);
+
+        let resp = self.http.get(&url).send().await?;
+
+        if resp.status().is_success() {
+            let trackers = resp.json::<Vec<crate::models::Tracker>>().await?;
+            Ok(trackers)
+        } else {
+            Err(anyhow!("Failed to get torrent trackers: {}", resp.status()))
         }
     }
 
@@ -672,6 +719,32 @@ impl QBitClient {
             Ok(())
         } else {
             Err(anyhow!("Failed to ban peers: {}", resp.status()))
+        }
+    }
+
+    pub async fn rename_file(&self, hash: &str, old_path: &str, new_path: &str) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/renameFile", self.base_url);
+        let params = [("hash", hash), ("oldPath", old_path), ("newPath", new_path)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to rename file: {}", resp.status()))
+        }
+    }
+
+    pub async fn get_main_data(&self, rid: i64) -> Result<crate::models::SyncMainData> {
+        let url = format!("{}/api/v2/sync/maindata?rid={}", self.base_url, rid);
+
+        let resp = self.http.get(&url).send().await?;
+
+        if resp.status().is_success() {
+            let data = resp.json::<crate::models::SyncMainData>().await?;
+            Ok(data)
+        } else {
+            Err(anyhow!("Failed to get main data: {}", resp.status()))
         }
     }
 }

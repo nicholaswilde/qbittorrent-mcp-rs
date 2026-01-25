@@ -3,7 +3,18 @@ use config::{Config, ConfigError, Environment, File};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
+pub struct QBitInstance {
+    pub name: String,
+    pub host: String,
+    pub port: Option<u16>,
+    pub username: Option<String>,
+    pub password: Option<String>,
+    pub no_verify_ssl: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct AppConfig {
+    pub instances: Option<Vec<QBitInstance>>,
     pub qbittorrent_host: String,
     pub qbittorrent_port: Option<u16>,
     pub qbittorrent_username: Option<String>,
@@ -20,6 +31,23 @@ pub struct AppConfig {
 }
 
 impl AppConfig {
+    pub fn get_instances(&self) -> Vec<QBitInstance> {
+        let instances = self.instances.as_ref().filter(|i| !i.is_empty());
+        if let Some(instances) = instances {
+            return instances.clone();
+        }
+
+        // Fallback to legacy single instance
+        vec![QBitInstance {
+            name: "default".to_string(),
+            host: self.qbittorrent_host.clone(),
+            port: self.qbittorrent_port,
+            username: self.qbittorrent_username.clone(),
+            password: self.qbittorrent_password.clone(),
+            no_verify_ssl: Some(self.no_verify_ssl),
+        }]
+    }
+
     pub fn load(file_path: Option<String>, cli_args: Vec<String>) -> Result<Self, ConfigError> {
         let mut builder = Config::builder();
         let matches = parse_args(cli_args);
