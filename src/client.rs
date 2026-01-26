@@ -735,6 +735,63 @@ impl QBitClient {
         }
     }
 
+    pub async fn set_torrent_share_limits(
+        &self,
+        hashes: &str,
+        ratio_limit: f64,
+        seeding_time_limit: i64,
+    ) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/setShareLimits", self.base_url);
+        let params = [
+            ("hashes", hashes.to_string()),
+            ("ratioLimit", ratio_limit.to_string()),
+            ("seedingTimeLimit", seeding_time_limit.to_string()),
+        ];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!(
+                "Failed to set torrent share limits: {}",
+                resp.status()
+            ))
+        }
+    }
+
+    pub async fn set_torrent_download_limit(&self, hashes: &str, limit: i64) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/setDownloadLimit", self.base_url);
+        let params = [("hashes", hashes), ("limit", &limit.to_string())];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!(
+                "Failed to set torrent download limit: {}",
+                resp.status()
+            ))
+        }
+    }
+
+    pub async fn set_torrent_upload_limit(&self, hashes: &str, limit: i64) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/setUploadLimit", self.base_url);
+        let params = [("hashes", hashes), ("limit", &limit.to_string())];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!(
+                "Failed to set torrent upload limit: {}",
+                resp.status()
+            ))
+        }
+    }
+
     pub async fn get_main_data(&self, rid: i64) -> Result<crate::models::SyncMainData> {
         let url = format!("{}/api/v2/sync/maindata?rid={}", self.base_url, rid);
 

@@ -768,6 +768,32 @@ impl McpServer {
                     "required": []
                 }
             }),
+            json!({
+                "name": "set_torrent_share_limits",
+                "description": "Set share limits for specific torrents",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "hashes": { "type": "string", "description": "Torrent hashes (pipe-separated)" },
+                        "ratio_limit": { "type": "number", "description": "Ratio limit (-2 for global, -1 for unlimited)" },
+                        "seeding_time_limit": { "type": "integer", "description": "Seeding time limit in minutes (-2 for global, -1 for unlimited)" }
+                    },
+                    "required": ["hashes", "ratio_limit", "seeding_time_limit"]
+                }
+            }),
+            json!({
+                "name": "set_torrent_speed_limits",
+                "description": "Set download and/or upload limits for specific torrents",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "hashes": { "type": "string", "description": "Torrent hashes (pipe-separated)" },
+                        "dl_limit": { "type": "integer", "description": "Download limit in bytes per second (0 for unlimited)" },
+                        "up_limit": { "type": "integer", "description": "Upload limit in bytes per second (0 for unlimited)" }
+                    },
+                    "required": ["hashes"]
+                }
+            }),
         ]
     }
 
@@ -1044,6 +1070,8 @@ impl McpServer {
             "cleanup_completed" => self.handle_cleanup_completed(client, args).await,
             "mass_rename" => self.handle_mass_rename(client, args).await,
             "find_duplicates" => self.handle_find_duplicates(client).await,
+            "set_torrent_share_limits" => self.handle_set_torrent_share_limits(client, args).await,
+            "set_torrent_speed_limits" => self.handle_set_torrent_speed_limits(client, args).await,
 
             // Search
             "search_torrents" => self.handle_search_torrents(client, args).await,
@@ -1594,6 +1622,54 @@ impl McpServer {
 
         Ok(
             json!({ "content": [{ "type": "text", "text": format!("Successfully renamed {} files.", rename_count) }] }),
+        )
+    }
+
+    async fn handle_set_torrent_share_limits(
+        &self,
+        client: &QBitClient,
+        args: &Value,
+    ) -> Result<Value> {
+        let hashes = args
+            .get("hashes")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing hashes"))?;
+        let ratio_limit = args
+            .get("ratio_limit")
+            .and_then(|v| v.as_f64())
+            .ok_or(anyhow::anyhow!("Missing ratio_limit"))?;
+        let seeding_time_limit = args
+            .get("seeding_time_limit")
+            .and_then(|v| v.as_i64())
+            .ok_or(anyhow::anyhow!("Missing seeding_time_limit"))?;
+
+        client
+            .set_torrent_share_limits(hashes, ratio_limit, seeding_time_limit)
+            .await?;
+        Ok(
+            json!({ "content": [{ "type": "text", "text": "Torrent share limits updated successfully" }] }),
+        )
+    }
+
+    async fn handle_set_torrent_speed_limits(
+        &self,
+        client: &QBitClient,
+        args: &Value,
+    ) -> Result<Value> {
+        let hashes = args
+            .get("hashes")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing hashes"))?;
+
+        if let Some(limit) = args.get("dl_limit").and_then(|v| v.as_i64()) {
+            client.set_torrent_download_limit(hashes, limit).await?;
+        }
+        if let Some(limit) = args.get("up_limit").and_then(|v| v.as_i64()) {
+            client.set_torrent_upload_limit(hashes, limit).await?;
+        }
+
+        Ok(
+            json!({ "content": [{ "type": "text", "text": "Torrent speed limits updated successfully" }] }),
         )
     }
 
