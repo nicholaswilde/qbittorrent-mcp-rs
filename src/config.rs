@@ -79,7 +79,7 @@ impl AppConfig {
         }
 
         // 4. Load from Environment Variables
-        builder = builder.add_source(Environment::default().try_parsing(true));
+        builder = builder.add_source(Environment::default().separator("__").try_parsing(true));
 
         // 5. Apply CLI overrides
         if let Some(host) = matches.get_one::<String>("qbittorrent_host") {

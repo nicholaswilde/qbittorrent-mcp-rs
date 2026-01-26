@@ -12,12 +12,14 @@ A [Model Context Protocol (MCP) server](https://modelcontextprotocol.io/docs/get
 
 - **:globe_with_meridians: Search**: Search for torrents using qBittorrent's built-in search engine plugins.
 - **:card_file_box: Torrent Management**:
+    - Manage multiple qBittorrent instances simultaneously.
     - List all torrents with status, progress, and speed.
     - Add torrents via Magnet URIs or HTTP URLs.
     - Pause, resume, delete, reannounce, and recheck torrents.
 - **:mag: Torrent Inspection**:
     - List files contained within a torrent.
     - Retrieve detailed properties (save path, creation date, seeds/peers, etc.).
+    - Inspect tracker status and messages.
 - **:traffic_light: Global Control**:
     - Monitor global download/upload speeds and limits.
     - Set global download and upload speed limits.
@@ -25,10 +27,16 @@ A [Model Context Protocol (MCP) server](https://modelcontextprotocol.io/docs/get
 - **:label: Categories & Tags**:
     - Organize torrents using categories and tags.
     - Create categories with dedicated save paths.
+- **:mega: Proactive Notifications**: Receive real-time notifications when downloads finish (powered by the Sync API).
+- **:broom: Maintenance Macros**:
+    - `cleanup_completed`: Auto-remove torrents based on seeding ratio or age.
+    - `mass_rename`: Bulk rename files within torrents using Regex.
+    - `find_duplicates`: Identify redundant downloads by name.
+- **:bulb: Troubleshooting Prompts**: Guided workflows to fix stalled or slow torrents.
 - **:sleeping: Lazy Mode**: Reduce token usage by hiding advanced tools until explicitly requested.
-- **:gear: Configuration**: TOML, YAML, JSON, or CLI arguments.
+- **:gear: Configuration**: TOML, YAML, JSON, or Environment Variables.
 - **:rocket: Transports**: Stdio (default) and HTTP (SSE with optional token auth).
-- **:books: Resources**: Expose live torrent lists, transfer info, and categories as MCP resources.
+- **:books: Resources**: Scoped resources for all instances (e.g., `qbittorrent://seedbox/torrents`).
 
 ## :hammer_and_wrench: Available Tools
 
@@ -43,13 +51,16 @@ The server exposes the following tools to the LLM, categorized by functionality:
 - `get_search_plugins`: List installed search plugins.
 
 ### :card_file_box: Torrent Management
-- `list_torrents`: List all torrents with their status and progress.
+- `list_torrents`: List all torrents with their status and progress. Supports filtering (state, category, tag) and sorting.
 - `add_torrent`: Add a new torrent via Magnet URI or HTTP URL.
 - `pause_torrent`: Pause one or more torrents (use `|` to separate multiple hashes).
 - `resume_torrent`: Resume one or more torrents (use `|` to separate multiple hashes).
 - `delete_torrent`: Delete one or more torrents, optionally deleting downloaded files.
 - `reannounce_torrent`: Reannounce one or more torrents to trackers.
 - `recheck_torrent`: Recheck (verify) one or more torrents.
+- `cleanup_completed`: Remove completed torrents based on minimum ratio or maximum age (days).
+- `mass_rename`: Rename multiple files in a torrent using a Regex pattern and replacement string.
+- `find_duplicates`: Group and list torrents with identical names.
 
 ### :mag: Torrent Inspection
 - `get_torrent_files`: List all files inside a specific torrent.
@@ -91,11 +102,16 @@ The server exposes the following tools to the LLM, categorized by functionality:
 
 ## :books: Resources
 
-The server exposes the following resources:
+The server exposes the following resources, scoped by instance name:
 
-- `qbittorrent://torrents`: Live list of all torrents (JSON).
-- `qbittorrent://transfer`: Global transfer statistics and limits (JSON).
-- `qbittorrent://categories`: List of all defined categories (JSON).
+- `qbittorrent://{instance}/torrents`: Live list of all torrents (JSON).
+- `qbittorrent://{instance}/transfer`: Global transfer statistics and limits (JSON).
+- `qbittorrent://{instance}/categories`: List of all defined categories (JSON).
+
+And templates for deep inspection:
+- `qbittorrent://{instance}/torrent/{hash}/properties`: Comprehensive metadata.
+- `qbittorrent://{instance}/torrent/{hash}/files`: File structure and individual progress.
+- `qbittorrent://{instance}/torrent/{hash}/trackers`: Tracker status and messages.
 
 ## :gear: Installation
 
@@ -125,6 +141,27 @@ lazy_mode = false              # or true to hide complex tools initially
 no_verify_ssl = false          # or true to disable SSL verification
 # http_auth_token = "secret"   # Optional token for HTTP mode
 ```
+
+### Environment Variables
+
+Environment variables override configuration file settings. Use `__` (double underscore) as a separator for nested fields.
+
+- `SERVER_MODE`: `stdio` or `http`
+- `LAZY_MODE`: `true` or `false`
+- `HTTP_AUTH_TOKEN`: Token for HTTP mode.
+
+**Single Instance:**
+- `QBITTORRENT_HOST`: Host address.
+- `QBITTORRENT_PORT`: Port number.
+- `QBITTORRENT_USERNAME`: Username.
+- `QBITTORRENT_PASSWORD`: Password.
+
+**Multiple Instances:**
+Use the `INSTANCES__<index>__<field>` pattern:
+- `INSTANCES__0__NAME=local`
+- `INSTANCES__0__HOST=localhost`
+- `INSTANCES__1__NAME=seedbox`
+- `INSTANCES__1__HOST=seedbox.example.com`
 
 ### CLI Arguments
 

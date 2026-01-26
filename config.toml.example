@@ -1,6 +1,26 @@
 # qBittorrent MCP Server Configuration Example
 
-# The host of the qBittorrent Web UI. 
+# --- Multi-Instance Management ---
+
+# You can manage multiple qBittorrent instances by defining an [[instances]] array.
+# If this array is defined, the top-level qbittorrent_* fields are ignored.
+
+# [[instances]]
+# name = "local"
+# host = "localhost"
+# port = 8080
+# username = "admin"
+# password = "password"
+
+# [[instances]]
+# name = "seedbox"
+# host = "seedbox.example.com"
+# username = "user"
+# password = "pass"
+# no_verify_ssl = true
+
+# --- Single Instance / Fallback ---
+
 # Can be an IP address, a hostname, or a full URL (http/https).
 qbittorrent_host = "localhost"
 
