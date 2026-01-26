@@ -148,10 +148,10 @@ pub struct Category {
 pub struct SearchPlugin {
     pub name: String,
     #[serde(rename = "fullName")]
-    pub full_name: String,
-    pub version: String,
+    pub full_name: Option<String>,
+    pub version: Option<String>,
     pub url: Option<String>,
-    pub supported_categories: Vec<String>,
+    pub supported_categories: Option<Vec<String>>,
     pub enabled: bool,
 }
 

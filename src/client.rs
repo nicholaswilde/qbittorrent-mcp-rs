@@ -159,29 +159,58 @@ impl QBitClient {
     }
 
     pub async fn pause_torrents(&self, hashes: &str) -> Result<()> {
-        let url = format!("{}/api/v2/torrents/pause", self.base_url);
+        // Try v5 "stop" endpoint first
+        let url_stop = format!("{}/api/v2/torrents/stop", self.base_url);
         let params = [("hashes", hashes)];
 
-        let resp = self.http.post(&url).form(&params).send().await?;
+        let resp_stop = self.http.post(&url_stop).form(&params).send().await?;
 
-        if resp.status().is_success() {
-            Ok(())
-        } else {
-            Err(anyhow!("Failed to pause torrents: {}", resp.status()))
+        if resp_stop.status().is_success() {
+            return Ok(());
+        } else if resp_stop.status() == reqwest::StatusCode::NOT_FOUND {
+            // Fallback to v4 "pause" endpoint
+            let url_pause = format!("{}/api/v2/torrents/pause", self.base_url);
+            let resp_pause = self.http.post(&url_pause).form(&params).send().await?;
+            if resp_pause.status().is_success() {
+                return Ok(());
+            } else {
+                return Err(anyhow!("Failed to pause torrents: {}", resp_pause.status()));
+            }
         }
+
+        Err(anyhow!(
+            "Failed to stop/pause torrents: {}",
+            resp_stop.status()
+        ))
     }
 
     pub async fn resume_torrents(&self, hashes: &str) -> Result<()> {
-        let url = format!("{}/api/v2/torrents/resume", self.base_url);
+        // Try v5 "start" endpoint first
+        let url_start = format!("{}/api/v2/torrents/start", self.base_url);
         let params = [("hashes", hashes)];
 
-        let resp = self.http.post(&url).form(&params).send().await?;
+        let resp_start = self.http.post(&url_start).form(&params).send().await?;
 
-        if resp.status().is_success() {
-            Ok(())
-        } else {
-            Err(anyhow!("Failed to resume torrents: {}", resp.status()))
+        if resp_start.status().is_success() {
+            return Ok(());
+        } else if resp_start.status() == reqwest::StatusCode::NOT_FOUND {
+            // Fallback to v4 "resume" endpoint
+            let url_resume = format!("{}/api/v2/torrents/resume", self.base_url);
+            let resp_resume = self.http.post(&url_resume).form(&params).send().await?;
+            if resp_resume.status().is_success() {
+                return Ok(());
+            } else {
+                return Err(anyhow!(
+                    "Failed to resume torrents: {}",
+                    resp_resume.status()
+                ));
+            }
         }
+
+        Err(anyhow!(
+            "Failed to start/resume torrents: {}",
+            resp_start.status()
+        ))
     }
 
     pub async fn delete_torrents(&self, hashes: &str, delete_files: bool) -> Result<()> {
@@ -344,9 +373,11 @@ impl QBitClient {
 
     pub async fn start_search(&self, pattern: &str, category: Option<&str>) -> Result<i64> {
         let url = format!("{}/api/v2/search/start", self.base_url);
-        let mut params = vec![("pattern", pattern)];
+        let mut params = vec![("pattern", pattern), ("plugins", "all")];
         if let Some(cat) = category {
             params.push(("category", cat));
+        } else {
+            params.push(("category", "all"));
         }
 
         let resp = self.http.post(&url).form(&params).send().await?;
@@ -566,12 +597,23 @@ impl QBitClient {
     pub async fn get_all_rss_feeds(
         &self,
     ) -> Result<std::collections::HashMap<String, serde_json::Value>> {
-        let url = format!("{}/api/v2/rss/allFeeds", self.base_url);
-        let resp = self.http.get(&url).send().await?;
+        // v5 uses 'items' with withData=true to get feeds and items
+        let url_items = format!("{}/api/v2/rss/items?withData=true", self.base_url);
+        let resp = self.http.get(&url_items).send().await?;
 
         if resp.status().is_success() {
             let feeds = resp.json().await?;
             Ok(feeds)
+        } else if resp.status() == reqwest::StatusCode::NOT_FOUND {
+            // Fallback to legacy
+            let url_legacy = format!("{}/api/v2/rss/allFeeds", self.base_url);
+            let resp_legacy = self.http.get(&url_legacy).send().await?;
+            if resp_legacy.status().is_success() {
+                let feeds = resp_legacy.json().await?;
+                Ok(feeds)
+            } else {
+                Err(anyhow!("Failed to get RSS feeds: {}", resp_legacy.status()))
+            }
         } else {
             Err(anyhow!("Failed to get RSS feeds: {}", resp.status()))
         }
@@ -593,12 +635,23 @@ impl QBitClient {
     pub async fn get_all_rss_rules(
         &self,
     ) -> Result<std::collections::HashMap<String, crate::models::RssRule>> {
-        let url = format!("{}/api/v2/rss/allRules", self.base_url);
-        let resp = self.http.get(&url).send().await?;
+        // v5 uses 'rules'
+        let url_rules = format!("{}/api/v2/rss/rules", self.base_url);
+        let resp = self.http.get(&url_rules).send().await?;
 
         if resp.status().is_success() {
             let rules = resp.json().await?;
             Ok(rules)
+        } else if resp.status() == reqwest::StatusCode::NOT_FOUND {
+            // Fallback to legacy
+            let url_legacy = format!("{}/api/v2/rss/allRules", self.base_url);
+            let resp_legacy = self.http.get(&url_legacy).send().await?;
+            if resp_legacy.status().is_success() {
+                let rules = resp_legacy.json().await?;
+                Ok(rules)
+            } else {
+                Err(anyhow!("Failed to get RSS rules: {}", resp_legacy.status()))
+            }
         } else {
             Err(anyhow!("Failed to get RSS rules: {}", resp.status()))
         }
@@ -737,16 +790,30 @@ impl QBitClient {
 
     pub async fn set_torrent_share_limits(
         &self,
+
         hashes: &str,
+
         ratio_limit: f64,
+
         seeding_time_limit: i64,
+
+        inactive_seeding_time_limit: Option<i64>,
     ) -> Result<()> {
         let url = format!("{}/api/v2/torrents/setShareLimits", self.base_url);
-        let params = [
+
+        let mut params = vec![
             ("hashes", hashes.to_string()),
             ("ratioLimit", ratio_limit.to_string()),
             ("seedingTimeLimit", seeding_time_limit.to_string()),
         ];
+
+        if let Some(limit) = inactive_seeding_time_limit {
+            params.push(("inactiveSeedingTimeLimit", limit.to_string()));
+        } else {
+            // Default to -2 (global) for compatibility with newer qbit versions
+
+            params.push(("inactiveSeedingTimeLimit", "-2".to_string()));
+        }
 
         let resp = self.http.post(&url).form(&params).send().await?;
 
