@@ -81,6 +81,7 @@ impl AppConfig {
         // 4. Load from Environment Variables
         builder = builder.add_source(
             Environment::with_prefix("QBITTORRENT")
+                .prefix_separator("_")
                 .separator("__")
                 .try_parsing(true),
         );
