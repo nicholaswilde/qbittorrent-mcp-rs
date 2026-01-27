@@ -1,10 +1,10 @@
 # Implementation Plan: Comprehensive Docker Integration Testing
 
-## Phase 1: Infrastructure & Test Harness
+## Phase 1: Infrastructure & Test Harness [checkpoint: f8511a3]
 - [x] Task: Add `testcontainers` and `testcontainers-modules` dependencies to `Cargo.toml`.
 - [x] Task: Create `tests/docker_integration_test.rs` with the shared container infrastructure (suite-level setup/teardown).
 - [x] Task: Verify the harness can successfully pull the image and spin up a container.
-- [ ] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
 
 ## Phase 2: Core & System Tools Testing
 - [ ] Task: Write failing tests for System Info tools (`get_app_version`, `get_build_info`, `get_app_preferences`).
