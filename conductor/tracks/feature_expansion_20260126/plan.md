@@ -1,6 +1,6 @@
 # Implementation Plan: Feature Expansion & Polish
 
-## Phase 1: Proactive Notifications (Real-time Event Loop)
+## Phase 1: Proactive Notifications (Real-time Event Loop) [checkpoint: 4b8afb2]
 - [x] Task: Update `McpState` or `McpServer` to support a background polling task.
 - [x] Task: Implement `start_event_loop` to poll `api/v2/sync/maindata` at a configurable interval.
 - [x] Task: Implement change detection logic to identify when a torrent finishes downloading.
