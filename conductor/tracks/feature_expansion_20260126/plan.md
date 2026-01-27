@@ -1,11 +1,11 @@
 # Implementation Plan: Feature Expansion & Polish
 
 ## Phase 1: Proactive Notifications (Real-time Event Loop)
-- [ ] Task: Update `McpState` or `McpServer` to support a background polling task.
-- [ ] Task: Implement `start_event_loop` to poll `api/v2/sync/maindata` at a configurable interval.
-- [ ] Task: Implement change detection logic to identify when a torrent finishes downloading.
-- [ ] Task: Push JSON-RPC notifications (`notifications/message` or `notifications/resources/updated`) when events occur.
-- [ ] Task: Add `polling_interval_ms` to configuration (config file, env var, CLI).
+- [x] Task: Update `McpState` or `McpServer` to support a background polling task.
+- [x] Task: Implement `start_event_loop` to poll `api/v2/sync/maindata` at a configurable interval.
+- [x] Task: Implement change detection logic to identify when a torrent finishes downloading.
+- [x] Task: Push JSON-RPC notifications (`notifications/message` or `notifications/resources/updated`) when events occur.
+- [x] Task: Add `polling_interval_ms` to configuration (config file, env var, CLI).
 - [ ] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
 
 ## Phase 2: Expanded Prompts Library
