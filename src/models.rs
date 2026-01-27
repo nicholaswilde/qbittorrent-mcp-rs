@@ -171,15 +171,23 @@ pub struct RssFeed {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct RssRule {
     pub enabled: bool,
+    #[serde(default)]
     pub must_contain: String,
+    #[serde(default)]
     pub must_not_contain: String,
+    #[serde(default)]
     pub use_regex: bool,
+    #[serde(default)]
     pub episode_filter: String,
+    #[serde(default)]
     pub smart_episode_filter: bool,
+    #[serde(default)]
     pub assign_category: String,
     pub add_paused: Option<bool>,
+    #[serde(default)]
     pub save_path: String,
 }
 
