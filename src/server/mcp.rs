@@ -449,35 +449,71 @@ impl McpServer {
     }
 
     fn get_prompt_definitions(&self) -> Vec<Value> {
-        vec![json!({
-            "name": "fix_stalled_torrent",
-            "description": "Get instructions and context to troubleshoot a stalled or slow torrent",
-            "arguments": [
-                {
-                    "name": "hash",
-                    "description": "Torrent hash to troubleshoot",
-                    "required": true
-                },
-                {
-                    "name": "instance",
-                    "description": "Instance name (optional)",
-                    "required": false
-                }
-            ]
-        })]
+        vec![
+            json!({
+                "name": "fix_stalled_torrent",
+                "description": "Get instructions and context to troubleshoot a stalled or slow torrent",
+                "arguments": [
+                    {
+                        "name": "hash",
+                        "description": "Torrent hash to troubleshoot",
+                        "required": true
+                    },
+                    {
+                        "name": "instance",
+                        "description": "Instance name (optional)",
+                        "required": false
+                    }
+                ]
+            }),
+            json!({
+                "name": "analyze_disk_space",
+                "description": "Check if there is enough disk space for current downloads",
+                "arguments": [
+                    {
+                        "name": "instance",
+                        "description": "Instance name (optional)",
+                        "required": false
+                    }
+                ]
+            }),
+            json!({
+                "name": "optimize_speed",
+                "description": "Suggest optimizations for slow downloads",
+                "arguments": [
+                    {
+                        "name": "instance",
+                        "description": "Instance name (optional)",
+                        "required": false
+                    }
+                ]
+            }),
+            json!({
+                "name": "troubleshoot_connection",
+                "description": "Diagnose connection and connectivity issues",
+                "arguments": [
+                    {
+                        "name": "instance",
+                        "description": "Instance name (optional)",
+                        "required": false
+                    }
+                ]
+            }),
+        ]
     }
 
     async fn handle_prompt_get(&self, name: &str, args: &Value) -> Result<Value> {
+        let instance = args
+            .get("instance")
+            .and_then(|v| v.as_str())
+            .unwrap_or("default");
+
         match name {
             "fix_stalled_torrent" => {
                 let hash = args
                     .get("hash")
                     .and_then(|v| v.as_str())
                     .ok_or(anyhow::anyhow!("Missing hash"))?;
-                let instance = args
-                    .get("instance")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("default");
 
                 Ok(json!({
                     "description": format!("Troubleshooting for torrent {} on instance {}", hash, instance),
@@ -501,6 +537,55 @@ impl McpServer {
                     ]
                 }))
             }
+            "analyze_disk_space" => Ok(json!({
+                "description": format!("Analyze disk space on instance {}", instance),
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": {
+                            "type": "text",
+                            "text": format!(
+                                "I want to check if I have enough disk space for my downloads on instance '{}'. \
+                                 Please check the current free space on disk and compare it with the total size of active/downloading torrents. \
+                                 You can get global transfer info and list all torrents to calculate the required space.",
+                                instance
+                            )
+                        }
+                    }
+                ]
+            })),
+            "optimize_speed" => Ok(json!({
+                "description": format!("Optimize download speeds on instance {}", instance),
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": {
+                            "type": "text",
+                            "text": format!(
+                                "My downloads are slow on instance '{}'. Please analyze my current global limits, \
+                                 alternative speed limits mode, and connection status (firewalled state, DHT nodes) to suggest optimizations.",
+                                instance
+                            )
+                        }
+                    }
+                ]
+            })),
+            "troubleshoot_connection" => Ok(json!({
+                "description": format!("Troubleshoot connection issues on instance {}", instance),
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": {
+                            "type": "text",
+                            "text": format!(
+                                "I think I have connection issues on instance '{}'. Please check my DHT node count and connection status, \
+                                 and verify if alternative speed limits are accidentally enabled.",
+                                instance
+                            )
+                        }
+                    }
+                ]
+            })),
             _ => anyhow::bail!("Prompt not found: {}", name),
         }
     }

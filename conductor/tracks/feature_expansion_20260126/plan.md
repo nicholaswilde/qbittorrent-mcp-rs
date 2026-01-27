@@ -9,12 +9,12 @@
 - [ ] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
 
 ## Phase 2: Expanded Prompts Library
-- [ ] Task: Add `analyze_disk_space` prompt to help users check storage vs downloads.
-- [ ] Task: Add `optimize_speed` prompt to check global limits and connection status.
-- [ ] Task: Add `troubleshoot_connection` prompt to diagnose firewalled status or low DHT nodes.
+- [x] Task: Add `analyze_disk_space` prompt to help users check storage vs downloads.
+- [x] Task: Add `optimize_speed` prompt to check global limits and connection status.
+- [x] Task: Add `troubleshoot_connection` prompt to diagnose firewalled status or low DHT nodes.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md)
 
 ## Phase 3: Documentation & Polish
-- [ ] Task: Add "Troubleshooting" section to `README.md` covering Docker connectivity and Authentication.
-- [ ] Task: Verify and update the "Features" list in `README.md` to match reality.
+- [x] Task: Add "Troubleshooting" section to `README.md` covering Docker connectivity and Authentication.
+- [x] Task: Verify and update the "Features" list in `README.md` to match reality.
 - [ ] Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md)

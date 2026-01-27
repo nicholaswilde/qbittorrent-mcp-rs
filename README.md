@@ -139,6 +139,7 @@ qbittorrent_password = "password"
 server_mode = "stdio"          # or "http"
 lazy_mode = false              # or true to hide complex tools initially
 no_verify_ssl = false          # or true to disable SSL verification
+polling_interval_ms = 2000     # Optional. Interval for proactive notifications (default: 2000ms)
 # http_auth_token = "secret"   # Optional token for HTTP mode
 ```
 
@@ -150,6 +151,7 @@ Environment variables override configuration file settings. Use `_` (single unde
 - `QBITTORRENT_LAZY_MODE`: `true` or `false`
 - `QBITTORRENT_HTTP_AUTH_TOKEN`: Token for HTTP mode.
 - `QBITTORRENT_LOG_LEVEL`: `error`, `warn`, `info`, `debug`, `trace`.
+- `QBITTORRENT_POLLING_INTERVAL_MS`: Polling interval in milliseconds.
 
 **Single Instance:**
 - `QBITTORRENT_HOST`: Host address.
@@ -181,6 +183,7 @@ CLI arguments override configuration file settings.
 - `--lazy`: Enable lazy mode (shows only essential tools initially to save tokens).
 - `--no-verify-ssl`: Disable SSL certificate verification (insecure).
 - `--http-auth-token <token>`: Authentication token for HTTP mode.
+- `--polling-interval-ms <ms>`: Polling interval for notifications (ms).
 - `--log-level <level>`: Log level (error, warn, info, debug, trace).
 - `--log-file-enable`: Enable logging to a file.
 - `--log-dir <dir>`: Log file directory.
@@ -220,6 +223,14 @@ Add this to your `claude_desktop_config.json`:
 Server will listen on port 3000.
 - SSE Endpoint: `http://localhost:3000/sse`
 - Message Endpoint: `http://localhost:3000/message`
+
+## :mag: Troubleshooting
+
+### Connection & Authentication Issues
+
+- **401 Unauthorized**: Ensure your username and password are correct. If running qBittorrent 4.6.1+ or 5.x, ensure `WebUI\HostHeaderValidation=false` is set in your `qBittorrent.conf` if you are accessing it via a custom hostname or reverse proxy.
+- **CSRF Protection**: If you encounter 403 Forbidden errors during login, ensure `WebUI\CSRFProtection=false` is set in your configuration, or that the server's `Origin` and `Referer` headers (handled automatically by this server) match the expected host.
+- **Docker Networking**: If running the MCP server outside of Docker and qBittorrent inside, use the host's IP address or `localhost` (if ports are mapped). If both are in Docker, use the container name as the host.
 
 ## :handshake: Contributing
 
