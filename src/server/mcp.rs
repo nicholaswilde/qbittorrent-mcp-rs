@@ -1720,4 +1720,87 @@ impl McpServer {
         let text = serde_json::to_string_pretty(&duplicates)?;
         Ok(json!({ "content": [{ "type": "text", "text": text }] }))
     }
+
+    pub fn start_event_loop(&self, interval_ms: u64) {
+        let server = self.clone();
+        tokio::spawn(async move {
+            server.event_loop(interval_ms).await;
+        });
+    }
+
+    async fn event_loop(&self, interval_ms: u64) {
+        let mut last_rids: HashMap<String, i64> = HashMap::new();
+        let mut notified_finished: HashMap<String, std::collections::HashSet<String>> =
+            HashMap::new();
+
+        for name in self.clients.keys() {
+            last_rids.insert(name.clone(), 0);
+            notified_finished.insert(name.clone(), std::collections::HashSet::new());
+        }
+
+        loop {
+            sleep(Duration::from_millis(interval_ms)).await;
+            for (name, client) in &self.clients {
+                let rid = *last_rids.get(name).unwrap_or(&0);
+                match client.get_main_data(rid).await {
+                    Ok(data) => {
+                        last_rids.insert(name.clone(), data.rid);
+
+                        // Track finished torrents to notify only once
+                        if let Some(torrents) = data.torrents {
+                            for (hash, torrent_val) in torrents {
+                                let progress = torrent_val.get("progress").and_then(|p| p.as_f64());
+                                let state = torrent_val.get("state").and_then(|s| s.as_str());
+
+                                // "uploading", "stalledUP", "queuedUP", "forcedUP" usually mean finished downloading
+                                let is_finished_state = state.is_some_and(|s| {
+                                    s == "uploading"
+                                        || s == "stalledUP"
+                                        || s == "queuedUP"
+                                        || s == "forcedUP"
+                                });
+
+                                if progress.is_some_and(|p| p >= 1.0) || is_finished_state {
+                                    let already_notified =
+                                        notified_finished.get_mut(name).unwrap().contains(&hash);
+                                    if !already_notified {
+                                        let torrent_name = torrent_val
+                                            .get("name")
+                                            .and_then(|n| n.as_str())
+                                            .unwrap_or(&hash);
+                                        info!(
+                                            "Notification: Torrent '{}' finished on {}",
+                                            torrent_name, name
+                                        );
+
+                                        // Custom notification
+                                        self.push_notification(
+                                            "notifications/torrent_finished",
+                                            json!({
+                                                "instance": name,
+                                                "hash": hash,
+                                                "name": torrent_name
+                                            }),
+                                        );
+
+                                        // Standard resource update notification
+                                        self.push_notification(
+                                                    "notifications/resources/updated",
+                                                    json!({ "uri": format!("qbittorrent://{}/torrents", name) }),
+                                                );
+
+                                        notified_finished
+                                            .get_mut(name)
+                                            .unwrap()
+                                            .insert(hash.clone());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => error!("Polling error for instance {}: {}", name, e),
+                }
+            }
+        }
+    }
 }

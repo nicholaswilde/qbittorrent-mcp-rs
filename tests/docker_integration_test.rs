@@ -20,7 +20,10 @@ async fn test_harness_connectivity() -> Result<()> {
         .with_env_var("PUID", "1000")
         .with_env_var("PGID", "1000")
         .with_env_var("WEBUI_PORT", "8080")
-        .with_mount(Mount::bind_mount(config_path_str, "/config/qBittorrent/qBittorrent.conf"));
+        .with_mount(Mount::bind_mount(
+            config_path_str,
+            "/config/qBittorrent/qBittorrent.conf",
+        ));
 
     let container = image.start().await?;
 
@@ -89,7 +92,7 @@ async fn test_harness_connectivity() -> Result<()> {
 
     println!("Testing set_global_transfer_limits...");
     client.set_download_limit(1024 * 1024).await?; // 1 MB/s
-    client.set_upload_limit(512 * 1024).await?;   // 512 KB/s
+    client.set_upload_limit(512 * 1024).await?; // 512 KB/s
     // Verify limits (fetch info again)
     let transfer_info_new = client.get_global_transfer_info().await?;
     assert_eq!(transfer_info_new.dl_rate_limit, 1024 * 1024);
@@ -119,7 +122,9 @@ async fn test_harness_connectivity() -> Result<()> {
     println!("Testing list_torrents...");
     // Wait a bit for it to register
     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-    let torrents = client.get_torrent_list(None, None, None, None, None, None, None).await?;
+    let torrents = client
+        .get_torrent_list(None, None, None, None, None, None, None)
+        .await?;
     assert!(!torrents.is_empty(), "Torrent list is empty after adding");
     let target_hash = torrents[0].hash.clone();
     println!("✅ Torrent found: {} ({})", torrents[0].name, target_hash);
@@ -147,8 +152,11 @@ async fn test_harness_connectivity() -> Result<()> {
     println!("Testing get_torrent_properties...");
     let props = client.get_torrent_properties(&target_hash).await?;
     // Relaxed assertion for magnet links without metadata
-    // assert!(props.creation_date >= 0); 
-    println!("✅ Torrent properties retrieved (Created: {})", props.creation_date);
+    // assert!(props.creation_date >= 0);
+    println!(
+        "✅ Torrent properties retrieved (Created: {})",
+        props.creation_date
+    );
 
     println!("Testing get_torrent_trackers...");
     let trackers = client.get_torrent_trackers(&target_hash).await?;
@@ -156,7 +164,7 @@ async fn test_harness_connectivity() -> Result<()> {
     println!("✅ Torrent trackers retrieved: {} trackers", trackers.len());
 
     println!("Testing get_torrent_files...");
-    let _files = client.get_torrent_files(&target_hash).await; 
+    let _files = client.get_torrent_files(&target_hash).await;
     println!("✅ Torrent files command executed");
 
     // --- Phase 4: Metadata, Search & RSS ---
@@ -175,25 +183,36 @@ async fn test_harness_connectivity() -> Result<()> {
 
     println!("Testing RSS...");
     // Add a dummy feed
-    client.add_rss_feed("http://localhost:8080/rss.xml", "TestFeed").await?; 
-    let feeds = client.get_all_rss_feeds().await?;
-    // Note: qBit might fail to add invalid URL, but let's see. 
-    // Usually it adds it but marks as error. 
+    client
+        .add_rss_feed("http://localhost:8080/rss.xml", "TestFeed")
+        .await?;
+    let _feeds = client.get_all_rss_feeds().await?;
+    // Note: qBit might fail to add invalid URL, but let's see.
+    // Usually it adds it but marks as error.
     // If it fails, we might need a mocked RSS feed or skip strict assertion on existence if network blocks it.
     println!("✅ RSS Feed added command sent");
 
-    client.set_rss_rule("TestRule", r#"{"enabled": true, "mustContain": "linux", "savePath": "/downloads"}"#).await?;
+    client
+        .set_rss_rule(
+            "TestRule",
+            r#"{"enabled": true, "mustContain": "linux", "savePath": "/downloads"}"#,
+        )
+        .await?;
     let rules = client.get_all_rss_rules().await?;
     assert!(rules.contains_key("TestRule"));
     println!("✅ RSS Rule added and verified");
 
     // --- Phase 5: Advanced Controls ---
     println!("Testing set_torrent_share_limits...");
-    client.set_torrent_share_limits(&target_hash, 2.0, 100, None).await?;
+    client
+        .set_torrent_share_limits(&target_hash, 2.0, 100, None)
+        .await?;
     println!("✅ Share limits set");
 
     println!("Testing set_torrent_speed_limits...");
-    client.set_torrent_download_limit(&target_hash, 50000).await?;
+    client
+        .set_torrent_download_limit(&target_hash, 50000)
+        .await?;
     client.set_torrent_upload_limit(&target_hash, 25000).await?;
     println!("✅ Speed limits set");
 
@@ -213,7 +232,9 @@ async fn test_harness_connectivity() -> Result<()> {
     println!("Testing delete_torrent...");
     client.delete_torrents(&target_hash, true).await?;
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-    let torrents_after_delete = client.get_torrent_list(None, None, None, None, None, None, None).await?;
+    let torrents_after_delete = client
+        .get_torrent_list(None, None, None, None, None, None, None)
+        .await?;
     assert!(torrents_after_delete.iter().all(|t| t.hash != target_hash));
     println!("✅ Torrent deleted");
 

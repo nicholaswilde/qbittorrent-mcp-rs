@@ -32,6 +32,8 @@ pub struct AppConfig {
     pub log_filename: String,
     pub log_rotate: String,
     pub http_auth_token: Option<String>,
+    #[serde(default)]
+    pub polling_interval_ms: u64,
 }
 
 impl AppConfig {
@@ -73,7 +75,8 @@ impl AppConfig {
             .set_default("log_file_enable", false)?
             .set_default("log_dir", ".")?
             .set_default("log_filename", "qbittorrent-mcp-rs.log")?
-            .set_default("log_rotate", "daily")?;
+            .set_default("log_rotate", "daily")?
+            .set_default("polling_interval_ms", 2000)?;
 
         // 3. Load from File
         if let Some(path) = path_to_load {
@@ -129,6 +132,9 @@ impl AppConfig {
         }
         if let Some(token) = matches.get_one::<String>("http_auth_token") {
             builder = builder.set_override("http_auth_token", token.as_str())?;
+        }
+        if let Some(interval) = matches.get_one::<u64>("polling_interval_ms") {
+            builder = builder.set_override("polling_interval_ms", *interval)?;
         }
 
         builder.build()?.try_deserialize()
@@ -218,6 +224,12 @@ fn parse_args(args: Vec<String>) -> ArgMatches {
             Arg::new("http_auth_token")
                 .long("http-auth-token")
                 .help("Authentication token for HTTP server mode"),
+        )
+        .arg(
+            Arg::new("polling_interval_ms")
+                .long("polling-interval-ms")
+                .help("Polling interval for notifications (ms)")
+                .value_parser(clap::value_parser!(u64)),
         );
 
     if args.is_empty() {

@@ -62,3 +62,14 @@ fn test_cli_overrides() {
     assert_eq!(config.qbittorrent_host, "cli_host");
     assert_eq!(config.qbittorrent_port, Some(9999));
 }
+
+#[test]
+fn test_polling_interval_config() {
+    let args = vec![
+        "app".to_string(),
+        "--polling-interval-ms".to_string(),
+        "5000".to_string(),
+    ];
+    let config = AppConfig::load(None, args).expect("Failed to load config");
+    assert_eq!(config.polling_interval_ms, 5000);
+}
