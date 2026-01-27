@@ -130,6 +130,11 @@ tasks:
       - cargo test --profile ci
       - task: clippy
 
+  test:docker:
+    desc: Run Docker integration tests
+    cmds:
+      - cargo test --test docker_integration_test -- --nocapture
+
   fmt:
     desc: Format code with rustfmt
     cmds:
