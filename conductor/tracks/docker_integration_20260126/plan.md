@@ -7,8 +7,8 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
 
 ## Phase 2: Core & System Tools Testing
-- [ ] Task: Write failing tests for System Info tools (`get_app_version`, `get_build_info`, `get_app_preferences`).
-- [ ] Task: Implement testing logic for system tools and verify they pass (Green).
+- [x] Task: Write failing tests for System Info tools (`get_app_version`, `get_build_info`, `get_app_preferences`).
+- [x] Task: Implement testing logic for system tools and verify they pass (Green).
 - [ ] Task: Write failing tests for Global Transfer tools (`get_global_transfer_info`, `set_global_transfer_limits`, `toggle_alternative_speed_limits`).
 - [ ] Task: Implement testing logic for global transfer tools and verify they pass (Green).
 - [ ] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md)

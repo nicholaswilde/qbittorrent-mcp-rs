@@ -54,11 +54,18 @@ impl QBitClient {
             ("password", self.password.as_deref().unwrap_or("")),
         ];
 
+        let base_url_with_slash = if self.base_url.ends_with('/') {
+            self.base_url.clone()
+        } else {
+            format!("{}/", self.base_url)
+        };
+
         let resp = self
             .http
             .post(&url)
-            .header("Referer", &self.base_url)
+            .header("Referer", &base_url_with_slash)
             .header("Origin", &self.base_url)
+            .header("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36")
             .form(&params)
             .send()
             .await?;
