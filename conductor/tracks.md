@@ -3,6 +3,7 @@
 This file tracks all major tracks for the project. Each track has its own detailed plan in its respective folder.
 
 ## Active Tracks
+- [ ] [CI Docker Integration](./tracks/ci_docker_integration_20260126/plan.md) - Integrating docker tests into Github Actions.
 - [ ] [Feature Expansion & Polish](./tracks/feature_expansion_20260126/plan.md) - Notifications, Prompts, and Documentation.
 - [Comprehensive Testing](./tracks/comprehensive_testing/plan.md) - verifying all tools against a live instance.
 - [Advanced Functionality](./tracks/advanced_functionality/plan.md)
