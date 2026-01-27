@@ -15,9 +15,13 @@ pub struct QBitInstance {
 #[derive(Debug, Deserialize, Clone)]
 pub struct AppConfig {
     pub instances: Option<Vec<QBitInstance>>,
+    #[serde(alias = "host")]
     pub qbittorrent_host: String,
+    #[serde(alias = "port")]
     pub qbittorrent_port: Option<u16>,
+    #[serde(alias = "username")]
     pub qbittorrent_username: Option<String>,
+    #[serde(alias = "password")]
     pub qbittorrent_password: Option<String>,
     pub server_mode: String,
     pub lazy_mode: bool,

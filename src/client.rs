@@ -54,7 +54,14 @@ impl QBitClient {
             ("password", self.password.as_deref().unwrap_or("")),
         ];
 
-        let resp = self.http.post(&url).form(&params).send().await?;
+        let resp = self
+            .http
+            .post(&url)
+            .header("Referer", &self.base_url)
+            .header("Origin", &self.base_url)
+            .form(&params)
+            .send()
+            .await?;
 
         if resp.status().is_success() {
             // Check body text for "Ok." just to be sure, though status 200 usually implies success for qbit.

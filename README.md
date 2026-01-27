@@ -144,11 +144,12 @@ no_verify_ssl = false          # or true to disable SSL verification
 
 ### Environment Variables
 
-Environment variables override configuration file settings. Use `__` (double underscore) as a separator for nested fields.
+Environment variables override configuration file settings. Use `_` (single underscore) after the `QBITTORRENT` prefix, and `__` (double underscore) as a separator for nested fields.
 
-- `SERVER_MODE`: `stdio` or `http`
-- `LAZY_MODE`: `true` or `false`
-- `HTTP_AUTH_TOKEN`: Token for HTTP mode.
+- `QBITTORRENT_SERVER_MODE`: `stdio` or `http`
+- `QBITTORRENT_LAZY_MODE`: `true` or `false`
+- `QBITTORRENT_HTTP_AUTH_TOKEN`: Token for HTTP mode.
+- `QBITTORRENT_LOG_LEVEL`: `error`, `warn`, `info`, `debug`, `trace`.
 
 **Single Instance:**
 - `QBITTORRENT_HOST`: Host address.
@@ -157,11 +158,11 @@ Environment variables override configuration file settings. Use `__` (double und
 - `QBITTORRENT_PASSWORD`: Password.
 
 **Multiple Instances:**
-Use the `INSTANCES__<index>__<field>` pattern:
-- `INSTANCES__0__NAME=local`
-- `INSTANCES__0__HOST=localhost`
-- `INSTANCES__1__NAME=seedbox`
-- `INSTANCES__1__HOST=seedbox.example.com`
+Use the `QBITTORRENT_INSTANCES__<index>__<field>` pattern:
+- `QBITTORRENT_INSTANCES__0__NAME=local`
+- `QBITTORRENT_INSTANCES__0__HOST=localhost`
+- `QBITTORRENT_INSTANCES__1__NAME=seedbox`
+- `QBITTORRENT_INSTANCES__1__HOST=seedbox.example.com`
 
 ### CLI Arguments
 

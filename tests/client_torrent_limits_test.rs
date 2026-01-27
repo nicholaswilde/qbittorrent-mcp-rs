@@ -15,7 +15,7 @@ async fn test_set_torrent_share_limits() -> Result<()> {
         .await;
 
     client
-        .set_torrent_share_limits("hash1|hash2", 2.0, 120)
+        .set_torrent_share_limits("hash1|hash2", 2.0, 120, None)
         .await?;
 
     Ok(())

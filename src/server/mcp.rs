@@ -776,7 +776,8 @@ impl McpServer {
                     "properties": {
                         "hashes": { "type": "string", "description": "Torrent hashes (pipe-separated)" },
                         "ratio_limit": { "type": "number", "description": "Ratio limit (-2 for global, -1 for unlimited)" },
-                        "seeding_time_limit": { "type": "integer", "description": "Seeding time limit in minutes (-2 for global, -1 for unlimited)" }
+                        "seeding_time_limit": { "type": "integer", "description": "Seeding time limit in minutes (-2 for global, -1 for unlimited)" },
+                        "inactive_seeding_time_limit": { "type": "integer", "description": "Inactive seeding time limit in minutes (-2 for global, -1 for unlimited)" }
                     },
                     "required": ["hashes", "ratio_limit", "seeding_time_limit"]
                 }
@@ -1642,9 +1643,17 @@ impl McpServer {
             .get("seeding_time_limit")
             .and_then(|v| v.as_i64())
             .ok_or(anyhow::anyhow!("Missing seeding_time_limit"))?;
+        let inactive_seeding_time_limit = args
+            .get("inactive_seeding_time_limit")
+            .and_then(|v| v.as_i64());
 
         client
-            .set_torrent_share_limits(hashes, ratio_limit, seeding_time_limit)
+            .set_torrent_share_limits(
+                hashes,
+                ratio_limit,
+                seeding_time_limit,
+                inactive_seeding_time_limit,
+            )
             .await?;
         Ok(
             json!({ "content": [{ "type": "text", "text": "Torrent share limits updated successfully" }] }),

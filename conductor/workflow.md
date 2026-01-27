@@ -9,6 +9,14 @@
 5. **User Experience First:** Every decision should prioritize user experience
 6. **Non-Interactive & CI-Aware:** Prefer non-interactive commands. Use `CI=true` for watch-mode tools (tests, linters) to ensure single execution.
 
+## Development Workflow
+
+-  **Implementation Phase**
+    * Create a "Test Harness" first: Write an integration test that spins up the necessary Docker container (e.g., qBittorrent).
+    * Verify the test fails (Red).
+    * Implement the MCP feature to connect to the container.
+    * Verify the test passes (Green).
+
 ## Task Workflow
 
 All tasks follow a strict lifecycle:

@@ -20,3 +20,17 @@
 - **Cargo Test:** For unit and integration testing.
 - **Clippy:** For linting and ensuring idiomatic Rust code.
 - **Rustfmt:** For consistent code formatting.
+- **Integration Tests:** MUST use ephemeral Docker containers.
+    * **Tool:** Use the `testcontainers` library (for Rust/Java/Go) or `docker-py` (for Python).
+    * **Image Source:** Default to `linuxserver/qbittorrent` for testing qBittorrent integration.
+    * **Pattern:**
+        1.  Spin up container on a random port.
+        2.  Wait for WebUI health check (HTTP 200).
+        3.  Run MCP tool against container.
+        4.  Destroy container.
+
+## Integration Testing Standard
+- **Test Coverage:** All new MCP tools must include an integration test in tests/.
+- **Test Templates:** Refer to tests/integration_test_template.rs for the required boilerplate.
+- **Docker Integration:** Tests must use testcontainers to spin up linuxserver/qbittorrent.
+- **Dynamic Networking:** Tests must dynamically fetch the host port using container.get_host_port_ipv4(8080).
