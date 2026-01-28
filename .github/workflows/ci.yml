@@ -82,6 +82,21 @@ jobs:
     - name: Run tests
       run: ${{ env.CARGO }} test --verbose --workspace ${{ env.TARGET_FLAGS }}
 
+  integration-test:
+    name: integration-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+      - name: Rust Cache
+        uses: swatinem/rust-cache@v2
+      - name: Run Integration Tests
+        run: cargo test --test docker_integration_test -- --nocapture
+
   rustfmt:
     runs-on: ubuntu-latest
     steps:
