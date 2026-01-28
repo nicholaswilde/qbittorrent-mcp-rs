@@ -1,7 +1,0 @@
-{
-    "id": "categories_tags",
-    "name": "Categories & Tags",
-    "description": "Implement tools for organizing torrents via categories and tags.",
-    "status": "active",
-    "created_at": "2026-01-23"
-}
