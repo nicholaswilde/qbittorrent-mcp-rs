@@ -1,7 +1,0 @@
-{
-    "id": "rss_management",
-    "name": "RSS Management",
-    "description": "Implement tools to manage RSS feeds and auto-download rules.",
-    "status": "active",
-    "created_at": "2026-01-23"
-}
