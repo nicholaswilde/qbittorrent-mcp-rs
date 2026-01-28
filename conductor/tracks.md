@@ -4,19 +4,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ## Completed Tracks
 - [x] [Feature Expansion & Polish](./tracks/feature_expansion_20260126/plan.md)
-- [x] [Torrent Management](./tracks/torrent_management/plan.md)
-- [x] [Torrent Inspection](./tracks/torrent_inspection/plan.md)
-- [x] [Global Transfer Control](./tracks/global_transfer_control/plan.md)
-- [x] [Search Functionality](./tracks/search_functionality/plan.md)
-- [x] [Categories & Tags](./tracks/categories_tags/plan.md)
-- [x] [Search Plugin Management](./tracks/search_plugins/plan.md)
-- [x] [RSS Management](./tracks/rss_management/plan.md)
-- [x] [Utility Tools](./tracks/utility_tools/plan.md)
-- [x] [App Preferences](./tracks/app_preferences/plan.md)
-- [x] [Log Inspection](./tracks/log_inspection/plan.md)
 
 ## Incomplete Tracks
-- [ ] [Advanced Functionality](./tracks/advanced_functionality/plan.md)
 - [ ] [Comprehensive Testing](./tracks/comprehensive_testing/plan.md)
 
 ## Archived Tracks
@@ -33,3 +22,4 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [Utility Tools](./archive/utility_tools/plan.md)
 - [App Preferences](./archive/app_preferences/plan.md)
 - [Log Inspection](./archive/log_inspection/plan.md)
+- [Advanced Functionality](./archive/advanced_functionality/plan.md)
