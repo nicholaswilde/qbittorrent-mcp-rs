@@ -1,7 +1,0 @@
-{
-    "id": "app_preferences",
-    "name": "App Preferences",
-    "description": "Implement tools to get and set qBittorrent application preferences.",
-    "status": "active",
-    "created_at": "2026-01-23"
-}

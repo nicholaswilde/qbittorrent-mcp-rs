@@ -12,9 +12,9 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [x] [Search Plugin Management](./tracks/search_plugins/plan.md)
 - [x] [RSS Management](./tracks/rss_management/plan.md)
 - [x] [Utility Tools](./tracks/utility_tools/plan.md)
+- [x] [App Preferences](./tracks/app_preferences/plan.md)
 
 ## Incomplete Tracks
-- [ ] [App Preferences](./tracks/app_preferences/plan.md)
 - [ ] [Log Inspection](./tracks/log_inspection/plan.md)
 - [ ] [Advanced Functionality](./tracks/advanced_functionality/plan.md)
 - [ ] [Comprehensive Testing](./tracks/comprehensive_testing/plan.md)
@@ -31,3 +31,4 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [Search Plugin Management](./archive/search_plugins/plan.md)
 - [RSS Management](./archive/rss_management/plan.md)
 - [Utility Tools](./archive/utility_tools/plan.md)
+- [App Preferences](./archive/app_preferences/plan.md)
