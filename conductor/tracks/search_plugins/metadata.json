@@ -1,7 +1,0 @@
-{
-    "id": "search_plugins",
-    "name": "Search Plugin Management",
-    "description": "Implement tools to manage qBittorrent search plugins.",
-    "status": "active",
-    "created_at": "2026-01-23"
-}
