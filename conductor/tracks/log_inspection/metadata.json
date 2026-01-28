@@ -1,7 +1,0 @@
-{
-    "id": "log_inspection",
-    "name": "System Log Inspection",
-    "description": "Implement tools to retrieve qBittorrent system and peer logs.",
-    "status": "active",
-    "created_at": "2026-01-23"
-}
