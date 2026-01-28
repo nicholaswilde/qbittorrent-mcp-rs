@@ -8,6 +8,12 @@ use tokio::io::AsyncBufReadExt;
 
 #[tokio::test]
 async fn test_harness_connectivity() -> Result<()> {
+    // Skip if RUN_DOCKER_TESTS is not set to true in CI
+    if std::env::var("CI").is_ok() && std::env::var("RUN_DOCKER_TESTS").unwrap_or_default() != "true" {
+        println!("Skipping Docker integration test (RUN_DOCKER_TESTS not set to true)");
+        return Ok(());
+    }
+
     println!("🐳 Starting qBittorrent container...");
 
     let config_path = std::env::current_dir()?.join("tests/resources/qBittorrent.conf");
