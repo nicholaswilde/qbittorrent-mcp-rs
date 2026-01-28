@@ -1,7 +1,0 @@
-{
-    "id": "torrent_inspection",
-    "name": "Torrent Inspection",
-    "description": "Implement tools to inspect torrent files and properties.",
-    "status": "active",
-    "created_at": "2026-01-23"
-}
