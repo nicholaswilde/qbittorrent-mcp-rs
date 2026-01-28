@@ -4,7 +4,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ## Completed Tracks
 - [x] [Feature Expansion & Polish](./tracks/feature_expansion_20260126/plan.md)
-- [~] [CI Docker Integration](./tracks/ci_docker_integration_20260126/plan.md)
+- [x] [CI Docker Integration](./tracks/ci_docker_integration_20260126/plan.md)
 - [Docker Integration Testing](./tracks/docker_integration_20260126/plan.md)
 - [Torrent Management](./tracks/torrent_management/plan.md)
 - [Torrent Inspection](./tracks/torrent_inspection/plan.md)
