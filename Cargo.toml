@@ -1,6 +1,6 @@
 [package]
 name = "qbittorrent-mcp-rs"
-version = "0.2.4"
+version = "0.2.5"
 edition = "2024"
 
 [dependencies]
@@ -27,7 +27,7 @@ uuid = { version = "1.19.0", features = ["v4", "fast-rng"] }
 
 [dev-dependencies]
 tempfile = "3.24.0"
-testcontainers = "0.23.1"
+testcontainers = "0.26.3"
 wiremock = "0.6.5"
 
 # Profile for CI/CD builds (inherits from dev)
