@@ -1,7 +1,0 @@
-{
-    "id": "global_transfer_control",
-    "name": "Global Transfer Control",
-    "description": "Implement tools to monitor and control global transfer speeds and limits.",
-    "status": "active",
-    "created_at": "2026-01-23"
-}
