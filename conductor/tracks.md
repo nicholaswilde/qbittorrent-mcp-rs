@@ -4,9 +4,9 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ## Completed Tracks
 - [x] [Feature Expansion & Polish](./tracks/feature_expansion_20260126/plan.md)
+- [x] [Comprehensive Testing](./tracks/comprehensive_testing/plan.md)
 
 ## Incomplete Tracks
-- [ ] [Comprehensive Testing](./tracks/comprehensive_testing/plan.md)
 
 ## Archived Tracks
 - [Core Foundation](./archive/core_foundation_20260123/plan.md)
@@ -23,3 +23,4 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [App Preferences](./archive/app_preferences/plan.md)
 - [Log Inspection](./archive/log_inspection/plan.md)
 - [Advanced Functionality](./archive/advanced_functionality/plan.md)
+- [Comprehensive Testing](./archive/comprehensive_testing/plan.md)
