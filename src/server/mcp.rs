@@ -880,6 +880,160 @@ impl McpServer {
                     "required": ["hashes"]
                 }
             }),
+            json!({
+                "name": "toggle_sequential_download",
+                "description": "Toggle sequential download for torrents",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "hashes": { "type": "string", "description": "Torrent hashes (pipe-separated)" }
+                    },
+                    "required": ["hashes"]
+                }
+            }),
+            json!({
+                "name": "toggle_first_last_piece_priority",
+                "description": "Toggle first/last piece priority for torrents",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "hashes": { "type": "string", "description": "Torrent hashes (pipe-separated)" }
+                    },
+                    "required": ["hashes"]
+                }
+            }),
+            json!({
+                "name": "set_force_start",
+                "description": "Set force start for torrents",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "hashes": { "type": "string", "description": "Torrent hashes (pipe-separated)" },
+                        "value": { "type": "boolean", "description": "True to force start, False otherwise" }
+                    },
+                    "required": ["hashes", "value"]
+                }
+            }),
+            json!({
+                "name": "set_super_seeding",
+                "description": "Set super seeding for torrents",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "hashes": { "type": "string", "description": "Torrent hashes (pipe-separated)" },
+                        "value": { "type": "boolean", "description": "True to enable super seeding, False otherwise" }
+                    },
+                    "required": ["hashes", "value"]
+                }
+            }),
+            json!({
+                "name": "add_trackers",
+                "description": "Add trackers to torrents",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "hashes": { "type": "string", "description": "Torrent hashes (pipe-separated)" },
+                        "urls": { "type": "string", "description": "URLs of the trackers (newline-separated)" }
+                    },
+                    "required": ["hashes", "urls"]
+                }
+            }),
+            json!({
+                "name": "edit_tracker",
+                "description": "Edit a tracker URL for a torrent",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "hash": { "type": "string", "description": "Torrent hash" },
+                        "orig_url": { "type": "string", "description": "Original tracker URL" },
+                        "new_url": { "type": "string", "description": "New tracker URL" }
+                    },
+                    "required": ["hash", "orig_url", "new_url"]
+                }
+            }),
+            json!({
+                "name": "remove_trackers",
+                "description": "Remove trackers from torrents",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "hashes": { "type": "string", "description": "Torrent hashes (pipe-separated)" },
+                        "urls": { "type": "string", "description": "URLs of the trackers to remove (newline-separated)" }
+                    },
+                    "required": ["hashes", "urls"]
+                }
+            }),
+            json!({
+                "name": "rename_folder",
+                "description": "Rename a folder in a torrent",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "hash": { "type": "string", "description": "Torrent hash" },
+                        "old_path": { "type": "string", "description": "Current folder path" },
+                        "new_path": { "type": "string", "description": "New folder path" }
+                    },
+                    "required": ["hash", "old_path", "new_path"]
+                }
+            }),
+            json!({
+                "name": "set_file_priority",
+                "description": "Set priority for files in a torrent",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "hash": { "type": "string", "description": "Torrent hash" },
+                        "id": { "type": "string", "description": "File IDs (pipe-separated)" },
+                        "priority": { "type": "integer", "description": "Priority (0: Do not download, 1: Normal, 6: High, 7: Maximal)" }
+                    },
+                    "required": ["hash", "id", "priority"]
+                }
+            }),
+            json!({
+                "name": "remove_categories",
+                "description": "Remove one or more categories",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "categories": { "type": "string", "description": "Category names (newline-separated)" }
+                    },
+                    "required": ["categories"]
+                }
+            }),
+            json!({
+                "name": "remove_tags",
+                "description": "Remove tags from torrents",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "hashes": { "type": "string", "description": "Torrent hashes (pipe-separated)" },
+                        "tags": { "type": "string", "description": "Tags to remove (comma-separated)" }
+                    },
+                    "required": ["hashes", "tags"]
+                }
+            }),
+            json!({
+                "name": "create_tags",
+                "description": "Create one or more tags",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "tags": { "type": "string", "description": "Tags to create (comma-separated)" }
+                    },
+                    "required": ["tags"]
+                }
+            }),
+            json!({
+                "name": "delete_tags",
+                "description": "Delete one or more tags",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "tags": { "type": "string", "description": "Tags to delete (comma-separated)" }
+                    },
+                    "required": ["tags"]
+                }
+            }),
         ]
     }
 
@@ -1051,6 +1205,18 @@ impl McpServer {
                     "required": []
                 }
             }),
+            json!({
+                "name": "move_rss_item",
+                "description": "Move an RSS item (feed or folder)",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "item_path": { "type": "string", "description": "Current path of the item" },
+                        "dest_path": { "type": "string", "description": "Destination path" }
+                    },
+                    "required": ["item_path", "dest_path"]
+                }
+            }),
         ]
     }
 
@@ -1158,6 +1324,24 @@ impl McpServer {
             "find_duplicates" => self.handle_find_duplicates(client).await,
             "set_torrent_share_limits" => self.handle_set_torrent_share_limits(client, args).await,
             "set_torrent_speed_limits" => self.handle_set_torrent_speed_limits(client, args).await,
+            "toggle_sequential_download" => {
+                self.handle_toggle_sequential_download(client, args).await
+            }
+            "toggle_first_last_piece_priority" => {
+                self.handle_toggle_first_last_piece_priority(client, args)
+                    .await
+            }
+            "set_force_start" => self.handle_set_force_start(client, args).await,
+            "set_super_seeding" => self.handle_set_super_seeding(client, args).await,
+            "add_trackers" => self.handle_add_trackers(client, args).await,
+            "edit_tracker" => self.handle_edit_tracker(client, args).await,
+            "remove_trackers" => self.handle_remove_trackers(client, args).await,
+            "rename_folder" => self.handle_rename_folder(client, args).await,
+            "set_file_priority" => self.handle_set_file_priority(client, args).await,
+            "remove_categories" => self.handle_remove_categories(client, args).await,
+            "remove_tags" => self.handle_remove_tags(client, args).await,
+            "create_tags" => self.handle_create_tags(client, args).await,
+            "delete_tags" => self.handle_delete_tags(client, args).await,
 
             // Search
             "search_torrents" => self.handle_search_torrents(client, args).await,
@@ -1172,6 +1356,7 @@ impl McpServer {
             "get_rss_feeds" => self.handle_get_rss_feeds(client).await,
             "set_rss_rule" => self.handle_set_rss_rule(client, args).await,
             "get_rss_rules" => self.handle_get_rss_rules(client).await,
+            "move_rss_item" => self.handle_move_rss_item(client, args).await,
 
             // Transfer / App
             "get_global_transfer_info" => self.handle_get_global_transfer_info(client).await,
@@ -1804,6 +1989,198 @@ impl McpServer {
 
         let text = serde_json::to_string_pretty(&duplicates)?;
         Ok(json!({ "content": [{ "type": "text", "text": text }] }))
+    }
+
+    async fn handle_toggle_sequential_download(
+        &self,
+        client: &QBitClient,
+        args: &Value,
+    ) -> Result<Value> {
+        let hashes = args
+            .get("hashes")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing hashes"))?;
+        client.toggle_sequential_download(hashes).await?;
+        Ok(
+            json!({ "content": [{ "type": "text", "text": "Sequential download toggled successfully" }] }),
+        )
+    }
+
+    async fn handle_toggle_first_last_piece_priority(
+        &self,
+        client: &QBitClient,
+        args: &Value,
+    ) -> Result<Value> {
+        let hashes = args
+            .get("hashes")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing hashes"))?;
+        client.toggle_first_last_piece_priority(hashes).await?;
+        Ok(
+            json!({ "content": [{ "type": "text", "text": "First/last piece priority toggled successfully" }] }),
+        )
+    }
+
+    async fn handle_set_force_start(&self, client: &QBitClient, args: &Value) -> Result<Value> {
+        let hashes = args
+            .get("hashes")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing hashes"))?;
+        let value = args
+            .get("value")
+            .and_then(|v| v.as_bool())
+            .ok_or(anyhow::anyhow!("Missing value"))?;
+        client.set_force_start(hashes, value).await?;
+        Ok(
+            json!({ "content": [{ "type": "text", "text": "Force start status updated successfully" }] }),
+        )
+    }
+
+    async fn handle_set_super_seeding(&self, client: &QBitClient, args: &Value) -> Result<Value> {
+        let hashes = args
+            .get("hashes")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing hashes"))?;
+        let value = args
+            .get("value")
+            .and_then(|v| v.as_bool())
+            .ok_or(anyhow::anyhow!("Missing value"))?;
+        client.set_super_seeding(hashes, value).await?;
+        Ok(
+            json!({ "content": [{ "type": "text", "text": "Super seeding status updated successfully" }] }),
+        )
+    }
+
+    async fn handle_add_trackers(&self, client: &QBitClient, args: &Value) -> Result<Value> {
+        let hashes = args
+            .get("hashes")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing hashes"))?;
+        let urls = args
+            .get("urls")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing urls"))?;
+        client.add_trackers(hashes, urls).await?;
+        Ok(json!({ "content": [{ "type": "text", "text": "Trackers added successfully" }] }))
+    }
+
+    async fn handle_edit_tracker(&self, client: &QBitClient, args: &Value) -> Result<Value> {
+        let hash = args
+            .get("hash")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing hash"))?;
+        let orig_url = args
+            .get("orig_url")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing orig_url"))?;
+        let new_url = args
+            .get("new_url")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing new_url"))?;
+        client.edit_tracker(hash, orig_url, new_url).await?;
+        Ok(json!({ "content": [{ "type": "text", "text": "Tracker edited successfully" }] }))
+    }
+
+    async fn handle_remove_trackers(&self, client: &QBitClient, args: &Value) -> Result<Value> {
+        let hashes = args
+            .get("hashes")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing hashes"))?;
+        let urls = args
+            .get("urls")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing urls"))?;
+        client.remove_trackers(hashes, urls).await?;
+        Ok(json!({ "content": [{ "type": "text", "text": "Trackers removed successfully" }] }))
+    }
+
+    async fn handle_rename_folder(&self, client: &QBitClient, args: &Value) -> Result<Value> {
+        let hash = args
+            .get("hash")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing hash"))?;
+        let old_path = args
+            .get("old_path")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing old_path"))?;
+        let new_path = args
+            .get("new_path")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing new_path"))?;
+        client.rename_folder(hash, old_path, new_path).await?;
+        Ok(json!({ "content": [{ "type": "text", "text": "Folder renamed successfully" }] }))
+    }
+
+    async fn handle_set_file_priority(&self, client: &QBitClient, args: &Value) -> Result<Value> {
+        let hash = args
+            .get("hash")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing hash"))?;
+        let id = args
+            .get("id")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing id"))?;
+        let priority = args
+            .get("priority")
+            .and_then(|v| v.as_i64())
+            .ok_or(anyhow::anyhow!("Missing priority"))? as i32;
+        client.set_file_priority(hash, id, priority).await?;
+        Ok(json!({ "content": [{ "type": "text", "text": "File priority updated successfully" }] }))
+    }
+
+    async fn handle_remove_categories(&self, client: &QBitClient, args: &Value) -> Result<Value> {
+        let categories = args
+            .get("categories")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing categories"))?;
+        client.remove_categories(categories).await?;
+        Ok(json!({ "content": [{ "type": "text", "text": "Categories removed successfully" }] }))
+    }
+
+    async fn handle_remove_tags(&self, client: &QBitClient, args: &Value) -> Result<Value> {
+        let hashes = args
+            .get("hashes")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing hashes"))?;
+        let tags = args
+            .get("tags")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing tags"))?;
+        client.remove_tags(hashes, tags).await?;
+        Ok(
+            json!({ "content": [{ "type": "text", "text": "Tags removed from torrents successfully" }] }),
+        )
+    }
+
+    async fn handle_create_tags(&self, client: &QBitClient, args: &Value) -> Result<Value> {
+        let tags = args
+            .get("tags")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing tags"))?;
+        client.create_tags(tags).await?;
+        Ok(json!({ "content": [{ "type": "text", "text": "Tags created successfully" }] }))
+    }
+
+    async fn handle_delete_tags(&self, client: &QBitClient, args: &Value) -> Result<Value> {
+        let tags = args
+            .get("tags")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing tags"))?;
+        client.delete_tags(tags).await?;
+        Ok(json!({ "content": [{ "type": "text", "text": "Tags deleted successfully" }] }))
+    }
+
+    async fn handle_move_rss_item(&self, client: &QBitClient, args: &Value) -> Result<Value> {
+        let item_path = args
+            .get("item_path")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing item_path"))?;
+        let dest_path = args
+            .get("dest_path")
+            .and_then(|v| v.as_str())
+            .ok_or(anyhow::anyhow!("Missing dest_path"))?;
+        client.move_rss_item(item_path, dest_path).await?;
+        Ok(json!({ "content": [{ "type": "text", "text": "RSS item moved successfully" }] }))
     }
 
     pub fn start_event_loop(&self, interval_ms: u64) {

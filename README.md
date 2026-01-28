@@ -61,6 +61,15 @@ The server exposes the following tools to the LLM, categorized by functionality:
 - `cleanup_completed`: Remove completed torrents based on minimum ratio or maximum age (days).
 - `mass_rename`: Rename multiple files in a torrent using a Regex pattern and replacement string.
 - `find_duplicates`: Group and list torrents with identical names.
+- `toggle_sequential_download`: Toggle sequential download for torrents.
+- `toggle_first_last_piece_priority`: Toggle first/last piece priority for torrents.
+- `set_force_start`: Set force start for torrents.
+- `set_super_seeding`: Set super seeding for torrents.
+- `add_trackers`: Add trackers to torrents.
+- `edit_tracker`: Edit a tracker URL for a torrent.
+- `remove_trackers`: Remove trackers from torrents.
+- `rename_folder`: Rename a folder in a torrent.
+- `set_file_priority`: Set priority for files in a torrent.
 
 ### :mag: Torrent Inspection
 - `get_torrent_files`: List all files inside a specific torrent.
@@ -79,13 +88,18 @@ The server exposes the following tools to the LLM, categorized by functionality:
 - `create_category`: Create a new category with a save path.
 - `set_torrent_category`: Assign a category to one or more torrents.
 - `get_categories`: List all available categories.
+- `remove_categories`: Remove one or more categories.
 - `add_torrent_tags`: Add tags to one or more torrents.
+- `remove_tags`: Remove tags from torrents.
+- `create_tags`: Create one or more tags.
+- `delete_tags`: Delete one or more tags.
 
 ### :wireless: RSS Management
 - `add_rss_feed`: Add a new RSS feed.
 - `get_rss_feeds`: List all RSS feeds and their items.
 - `set_rss_rule`: Create or update an RSS auto-download rule.
 - `get_rss_rules`: List all RSS auto-download rules.
+- `move_rss_item`: Move an RSS item (feed or folder).
 
 ### :toolbox: Utility Tools
 - `wait_for_torrent_status`: Poll a torrent until it reaches a desired state (e.g., "uploading") or timeout. Useful for sequential automation without constant polling from the agent.

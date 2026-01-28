@@ -885,4 +885,196 @@ impl QBitClient {
             Err(anyhow!("Failed to get main data: {}", resp.status()))
         }
     }
+
+    pub async fn toggle_sequential_download(&self, hashes: &str) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/toggleSequentialDownload", self.base_url);
+        let params = [("hashes", hashes)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!(
+                "Failed to toggle sequential download: {}",
+                resp.status()
+            ))
+        }
+    }
+
+    pub async fn toggle_first_last_piece_priority(&self, hashes: &str) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/toggleFirstLastPiecePrio", self.base_url);
+        let params = [("hashes", hashes)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!(
+                "Failed to toggle first/last piece priority: {}",
+                resp.status()
+            ))
+        }
+    }
+
+    pub async fn set_force_start(&self, hashes: &str, value: bool) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/setForceStart", self.base_url);
+        let params = [("hashes", hashes), ("value", &value.to_string())];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to set force start: {}", resp.status()))
+        }
+    }
+
+    pub async fn set_super_seeding(&self, hashes: &str, value: bool) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/setSuperSeeding", self.base_url);
+        let params = [("hashes", hashes), ("value", &value.to_string())];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to set super seeding: {}", resp.status()))
+        }
+    }
+
+    pub async fn add_trackers(&self, hashes: &str, urls: &str) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/addTrackers", self.base_url);
+        let params = [("hashes", hashes), ("urls", urls)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to add trackers: {}", resp.status()))
+        }
+    }
+
+    pub async fn edit_tracker(&self, hash: &str, orig_url: &str, new_url: &str) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/editTracker", self.base_url);
+        let params = [("hash", hash), ("origUrl", orig_url), ("newUrl", new_url)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to edit tracker: {}", resp.status()))
+        }
+    }
+
+    pub async fn remove_trackers(&self, hashes: &str, urls: &str) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/removeTrackers", self.base_url);
+        let params = [("hashes", hashes), ("urls", urls)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to remove trackers: {}", resp.status()))
+        }
+    }
+
+    pub async fn rename_folder(&self, hash: &str, old_path: &str, new_path: &str) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/renameFolder", self.base_url);
+        let params = [("hash", hash), ("oldPath", old_path), ("newPath", new_path)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to rename folder: {}", resp.status()))
+        }
+    }
+
+    pub async fn set_file_priority(&self, hash: &str, id: &str, priority: i32) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/setFilePrio", self.base_url);
+        let params = [
+            ("hash", hash),
+            ("id", id),
+            ("priority", &priority.to_string()),
+        ];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to set file priority: {}", resp.status()))
+        }
+    }
+
+    pub async fn remove_categories(&self, categories: &str) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/removeCategories", self.base_url);
+        let params = [("categories", categories)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to remove categories: {}", resp.status()))
+        }
+    }
+
+    pub async fn remove_tags(&self, hashes: &str, tags: &str) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/removeTags", self.base_url);
+        let params = [("hashes", hashes), ("tags", tags)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to remove tags: {}", resp.status()))
+        }
+    }
+
+    pub async fn create_tags(&self, tags: &str) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/createTags", self.base_url);
+        let params = [("tags", tags)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to create tags: {}", resp.status()))
+        }
+    }
+
+    pub async fn delete_tags(&self, tags: &str) -> Result<()> {
+        let url = format!("{}/api/v2/torrents/deleteTags", self.base_url);
+        let params = [("tags", tags)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to delete tags: {}", resp.status()))
+        }
+    }
+
+    pub async fn move_rss_item(&self, item_path: &str, dest_path: &str) -> Result<()> {
+        let url = format!("{}/api/v2/rss/moveItem", self.base_url);
+        let params = [("itemPath", item_path), ("destPath", dest_path)];
+
+        let resp = self.http.post(&url).form(&params).send().await?;
+
+        if resp.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to move RSS item: {}", resp.status()))
+        }
+    }
 }
