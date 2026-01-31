@@ -7,7 +7,7 @@ edition = "2024"
 anyhow = "1.0.100"
 async-trait = "0.1.89"
 axum = "0.8.8"
-clap = { version = "4.5.54", features = ["derive"] }
+clap = { version = "4.5.56", features = ["derive"] }
 config = "0.15.19"
 dashmap = "6.1.0"
 futures = "0.3.31"
