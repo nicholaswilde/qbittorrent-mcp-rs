@@ -251,3 +251,66 @@ jobs:
           ${{ env.ASSET }}
           ${{ env.ASSET_SUM }}
         draft: true
+
+  homebrew:
+    name: Bump Homebrew formula
+    needs: [create-release, build-release]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Checkout tap
+        uses: actions/checkout@v6
+        with:
+          repository: nicholaswilde/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          path: tap
+
+      - name: Update formula
+        env:
+          VERSION: ${{ needs.create-release.outputs.version }}
+        run: |
+          FORMULA="tap/Formula/qbittorrent-mcp-rs.rb"
+          
+          # Update version
+          sed -i "s/version \".*\"/version \"$VERSION\"/" $FORMULA
+
+          # Targets to update
+          targets=("aarch64-apple-darwin" "x86_64-apple-darwin" "aarch64-unknown-linux-musl" "x86_64-unknown-linux-musl" "arm-unknown-linux-gnueabihf")
+
+          for target in "${targets[@]}"; do
+            URL="https://github.com/nicholaswilde/qbittorrent-mcp-rs/releases/download/v$VERSION/qbittorrent-mcp-rs-$VERSION-$target.tar.gz"
+            
+            # Get hash (retry a few times as release assets might take a moment to be available)
+            HASH=""
+            for i in {1..10}; do
+              HASH=$(curl -sL "$URL.sha256" | awk '{print $1}')
+              if [ -n "$HASH" ]; then break; fi
+              echo "Waiting for $target hash..."
+              sleep 15
+            done
+            
+            if [ -z "$HASH" ]; then
+              echo "Failed to get hash for $target"
+              exit 1
+            fi
+
+            echo "Updating $target with hash $HASH"
+
+            # Update URL and subsequent sha256
+            export TARGET_URL="$URL"
+            export TARGET_HASH="$HASH"
+            export TARGET_NAME="$target"
+            
+            perl -i -0777 -pe 's/(url ".*?qbittorrent-mcp-rs-.*?-'"$TARGET_NAME"'\.tar\.gz"\n\s+sha256\s+")[a-f0-9]+"/$1'"$TARGET_HASH"'"/g' $FORMULA
+            perl -i -0777 -pe 's/(url\s+").*?qbittorrent-mcp-rs-.*?-'"$TARGET_NAME"'\.tar\.gz"/\1'"$TARGET_URL"'"/g' $FORMULA
+            perl -i -0777 -pe 's/(bin\.install\s+"qbittorrent-mcp-rs-).*?-'"$TARGET_NAME"'\/(qbittorrent-mcp-rs")/$1'"$VERSION"'-'"$TARGET_NAME"'\/\2/g' $FORMULA
+          done
+
+      - name: Commit and push
+        run: |
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "qbittorrent-mcp-rs ${{ needs.create-release.outputs.version }}" || echo "No changes to commit"
+          git push
