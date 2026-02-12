@@ -13,7 +13,11 @@ This track involves transforming the `qbittorrent-mcp-rs` server into a native G
 ## Non-Functional Requirements
 - **Cross-Platform Compatibility:** The installation and binary management must work on Linux, macOS, and Windows.
 - **Zero-Dependency Installation:** Users should not need to manually install Rust or compile the binary.
-- **Security:** Ensure qBittorrent credentials are handled securely according to Gemini CLI extension best practices.
+- **Security:** Ensure qBittorrent credentials are handled securely according to Gemini CLI extension best practices (e.g., using `sensitive: true`).
+- **Configuration Best Practices:**
+    - Provide clear descriptions for each setting to guide the user.
+    - Use concise, user-friendly names for settings.
+    - Leverage workspace-scoped settings for project-specific configurations to avoid global pollution.
 
 ## Acceptance Criteria
 - [ ] The extension can be successfully installed via the Gemini CLI.

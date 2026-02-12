@@ -22,7 +22,11 @@ Implement the "Self-contained" binary delivery mechanism.
 Enable users to configure their qBittorrent connection details via the CLI.
 
 - [ ] Task: Implement the `gemini qbittorrent setup` command to interactively collect host, port, username, and password.
+    - [ ] Task: Provide clear descriptions for each prompt (e.g., "The URL of your qBittorrent Web UI").
+    - [ ] Task: Use concise, user-friendly names for settings.
 - [ ] Task: Store configuration securely using the Gemini CLI's preferred storage mechanism.
+    - [ ] Task: Ensure passwords and sensitive data use `"sensitive": true`.
+    - [ ] Task: Support workspace-scoped settings for project-specific qBittorrent instances.
 - [ ] Task: Verify that the stored configuration is correctly passed to the MCP server binary during execution.
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Configuration and Setup Workflow' (Protocol in workflow.md)
 
