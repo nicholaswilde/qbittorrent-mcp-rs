@@ -9,6 +9,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 ## Incomplete Tracks
 - [ ] **Track: Gemini CLI Extension for qBittorrent MCP**
 *Link: [./tracks/gemini_extension_20260212/](./tracks/gemini_extension_20260212/)*
+- [ ] **Track: MCP Best Practices & Rules of Engagement**
+*Link: [./tracks/mcp_best_practices_20260212/](./tracks/mcp_best_practices_20260212/)*
 
 ## Archived Tracks
 - [Core Foundation](./archive/core_foundation_20260123/plan.md)
