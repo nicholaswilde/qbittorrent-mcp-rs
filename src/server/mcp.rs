@@ -607,7 +607,7 @@ impl McpServer {
                             "type": "text",
                             "text": "As an AI agent interacting with the qBittorrent MCP server, you must adhere to the following Rules of Engagement:\n\n\
                                      1. **State Verification**: Always verify the current state of a torrent (via `list_torrents` or resources) before performing actions like pause, resume, or delete.\n\
-                                     2. **Destructive Actions**: Clearly inform the user and obtain confirmation before calling `delete_torrent` or `shutdown_app`. Specify if files will be deleted from disk.\n\
+                                     2. **Destructive Actions**: Clearly inform the user and obtain confirmation before calling `delete_torrent` or `shutdown_app`. For these \"destructive\" actions, use the `destructiveHint` annotation or require a separate confirmation step.\n\
                                      3. **Search Etiquette**: Search is asynchronous. Use `get_search_results` for polling and always call `stop_search` once finished to save resources.\n\
                                      4. **Error Handling**: Treat errors as information for self-correction. Return helpful hints and use `isError: true` to prevent hallucination.\n\
                                      5. **Idempotency**: Avoid redundant commands (e.g., do not pause an already paused torrent).\n\

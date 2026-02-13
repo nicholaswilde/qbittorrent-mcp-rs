@@ -11,6 +11,7 @@ Before performing any action on a specific torrent or resource, the agent **MUST
 Actions that result in data loss or service interruption require explicit user awareness.
 - **Rule:** The tools `delete_torrent` (especially with `delete_files: true`) and `shutdown_app` **MUST** be preceded by an explanation to the user of what is about to happen.
 - **Rule:** For `delete_torrent`, clearly state if files will be deleted from disk.
+- **Human-in-the-Loop:** For these "destructive" actions, use the `destructiveHint` annotation or require a separate confirmation step to ensure the user is fully aware and in control.
 
 ## 3. Search Etiquette
 Search operations in qBittorrent are asynchronous and can be resource-intensive.
