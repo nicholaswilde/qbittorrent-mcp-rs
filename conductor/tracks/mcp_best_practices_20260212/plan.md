@@ -2,12 +2,12 @@
 
 This plan details the steps to implement behavioral rules and best practices for AI agents interacting with the qBittorrent MCP server.
 
-## Phase 1: Conductor Documentation Updates
+## Phase 1: Conductor Documentation Updates [checkpoint: 9f50900]
 Codify the rules of engagement within the project's management documents.
 
 - [x] Task: Create `conductor/mcp-rules.md` with adapted rules (Verify state, Semantic feedback, Idempotency, Security).
 - [x] Task: Update `conductor/product-guidelines.md` to reference the new rules of engagement.
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Conductor Documentation Updates' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Conductor Documentation Updates' (Protocol in workflow.md)
 
 ## Phase 2: Tool Metadata Enhancement
 Update the MCP tool definitions in code to include safety and behavioral instructions.
