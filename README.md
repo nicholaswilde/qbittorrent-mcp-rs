@@ -238,6 +238,24 @@ Server will listen on port 3000.
 - SSE Endpoint: `http://localhost:3000/sse`
 - Message Endpoint: `http://localhost:3000/message`
 
+## :hammer_and_wrench: Development
+
+### Code Coverage
+
+To generate local code coverage reports, ensure you have `cargo-llvm-cov` installed:
+
+```bash
+cargo install cargo-llvm-cov
+```
+
+Run the following command to execute tests and generate a console summary along with a `lcov.info` file:
+
+```bash
+task coverage
+```
+
+The `lcov.info` file is compatible with IDE extensions like **VS Code Coverage Gutters**.
+
 ## :mag: Troubleshooting
 
 ### Connection & Authentication Issues

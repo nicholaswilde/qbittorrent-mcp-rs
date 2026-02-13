@@ -6,6 +6,11 @@ vars:
     sh: hostname -I | awk '{print $1}'
 
 tasks:
+  coverage:
+    desc: Run code coverage and generate lcov.info
+    cmds:
+      - cargo llvm-cov
+      - cargo llvm-cov --lcov --output-path ./lcov.info
   clippy:
     desc: Run cargo clippy
     cmds:

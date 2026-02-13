@@ -43,3 +43,8 @@ test_bg.log
 /target
 
 **/settings.json
+
+# Coverage
+lcov.info
+coverage/
+/target/llvm-cov/
