@@ -13,7 +13,7 @@ Prepare the project environment and provide developer instructions.
     - [x] Document how to run the `task coverage` command.
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Setup and Documentation' (Protocol in workflow.md)
 
-## Phase 2: Taskfile Integration
+## Phase 2: Taskfile Integration [checkpoint: 555d0c0]
 Add the automated coverage generation task to the project's Taskfile.
 
 - [x] Task: Implement the `coverage` task in `Taskfile.yml`.
