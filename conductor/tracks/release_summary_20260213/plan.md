@@ -16,13 +16,13 @@ Set up the command file and implement the logic to identify the commit range to 
 ## Phase 2: Log Parsing and Categorization
 Implement the parsing of `git log` and the categorization of commits into features, fixes, etc.
 
-- [ ] Task: Implement commit parsing logic.
-    - [ ] Sub-task: Write tests for parsing various commit message formats (Conventional Commits).
-    - [ ] Sub-task: Implement parsing and categorization into `feat`, `fix`, `chore`, `docs`, etc.
-- [ ] Task: Implement emoji mapping and categorization.
-    - [ ] Sub-task: Write tests for emoji shortcode mapping based on `conductor/workflow.md`.
-    - [ ] Sub-task: Implement mapping (e.g., `feat` -> `:sparkles:`, `fix` -> `:bug:`, etc.).
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Log Parsing and Categorization' (Protocol in workflow.md)
+- [x] Task: Implement commit parsing logic.
+    - [x] Sub-task: Write tests for parsing various commit message formats (Conventional Commits).
+    - [x] Sub-task: Implement parsing and categorization into `feat`, `fix`, `chore`, `docs`, etc.
+- [x] Task: Implement emoji mapping and categorization.
+    - [x] Sub-task: Write tests for emoji shortcode mapping based on `conductor/workflow.md`.
+    - [x] Sub-task: Implement mapping (e.g., `feat` -> `:sparkles:`, `fix` -> `:bug:`, etc.).
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Log Parsing and Categorization' (Protocol in workflow.md)
 
 ## Phase 3: Formatting and Integration
 Generate the final Markdown output and integrate it into the `gemini-cli` command.

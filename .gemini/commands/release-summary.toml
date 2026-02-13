@@ -5,20 +5,30 @@ range = { type = "string", description = "Commit range or tag (e.g., v0.1.0..v0.
 
 [prompt]
 content = """
-You are an expert technical writer. Generate a GitHub release summary for the following git log range: {{range}}
+You are an expert technical writer. Your task is to generate a professional and concise GitHub release summary.
 
-Guidelines:
-1.  **Format**: Use standard GitHub-flavored Markdown.
-2.  **No Line Numbers**: Do not include line numbers in code blocks or lists.
-3.  **Code Blocks**: Use triple backticks (```) for all code snippets.
-4.  **Categorization**: Group changes into categories and use these emoji shortcodes:
-    -   :rocket: **Features** (feat)
-    -   :bug: **Bug Fixes** (fix)
-    -   :sparkles: **Improvements** (refactor, style)
-    -   :memo: **Documentation** (docs)
-    -   :gear: **Maintenance** (chore, test)
-5.  **Content**: Be concise but descriptive. Focus on the 'why' and 'what' changed.
+**Input Range**: {{range}}
 
-Git Log Content for range {{range}}:
-$(git log --pretty=format:"- %s (%h)" {{range}})
+**Instructions**:
+1.  **Categorization**: Parse the git log entries provided below. Group them into the following categories, using the exact emoji shortcode and header title:
+    -   :rocket: **Features** (for `feat` type commits)
+    -   :bug: **Bug Fixes** (for `fix` type commits)
+    -   :sparkles: **Improvements** (for `refactor`, `perf`, `style` type commits)
+    -   :memo: **Documentation** (for `docs` type commits)
+    -   :gear: **Maintenance** (for `chore`, `test`, `build`, `ci` type commits)
+2.  **Formatting**:
+    -   Use a bulleted list for each category.
+    -   If a category has no entries, omit it entirely.
+    -   Exclude the type prefix (e.g., "feat:", "fix:") from the final bullet point text, but keep the scope if present (e.g., "auth: add google sso").
+    -   Do not include commit hashes in the final output unless requested (keep it clean).
+    -   Ensure all code snippets or technical terms are wrapped in backticks.
+    -   Use triple backticks (```) for multi-line examples if necessary.
+    -   **No line numbers** anywhere.
+3.  **Tone**: Professional, direct, and helpful.
+
+**Git Log Content**:
+$(git log --pretty=format:"- %s" {{range}})
+
+**Output**:
+(Generate the Markdown summary below)
 """
