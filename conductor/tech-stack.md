@@ -18,6 +18,8 @@
 
 ## Testing & Quality Assurance
 - **Cargo Test:** For unit and integration testing.
+- **cargo-llvm-cov:** For measuring code coverage.
+- **Coveralls.io:** For tracking and reporting code coverage metrics.
 - **Clippy:** For linting and ensuring idiomatic Rust code.
 - **Rustfmt:** For consistent code formatting.
 - **Integration Tests:** MUST use ephemeral Docker containers.
