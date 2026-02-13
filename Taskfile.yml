@@ -11,6 +11,10 @@ tasks:
     cmds:
       - cargo llvm-cov
       - cargo llvm-cov --lcov --output-path ./lcov.info
+  coverage:upload:
+    desc: Upload lcov.info to Coveralls (requires COVERALLS_REPO_TOKEN)
+    cmds:
+      - coveralls --lcov lcov.info
   clippy:
     desc: Run cargo clippy
     cmds:

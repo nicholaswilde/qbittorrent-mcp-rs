@@ -256,6 +256,15 @@ task coverage
 
 The `lcov.info` file is compatible with IDE extensions like **VS Code Coverage Gutters**.
 
+#### Reporting to Coveralls.io
+
+To upload coverage data to [Coveralls.io](https://coveralls.io/), set your repository token and run the upload task:
+
+```bash
+export COVERALLS_REPO_TOKEN=your_token_here
+task coverage:upload
+```
+
 ## :mag: Troubleshooting
 
 ### Connection & Authentication Issues

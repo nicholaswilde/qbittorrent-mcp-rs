@@ -2343,4 +2343,234 @@ mod tests {
         assert!(text.contains("Semantic Feedback"));
         assert!(text.contains("Security"));
     }
+
+    #[tokio::test]
+    async fn test_tool_call_routing() {
+        let client = QBitClient::new("http://localhost:8080", "admin", "adminadmin", false);
+        let mut clients = HashMap::new();
+        clients.insert("default".to_string(), client);
+        let server = McpServer::new(clients, false);
+
+        // Test all available tools to verify routing logic
+        let tools_to_test = vec![
+            ("list_torrents", json!({})),
+            ("add_torrent", json!({ "url": "magnet:?xt=urn:btih:..." })),
+            ("pause_torrent", json!({ "hash": "abc" })),
+            ("resume_torrent", json!({ "hash": "abc" })),
+            (
+                "delete_torrent",
+                json!({ "hash": "abc", "delete_files": false }),
+            ),
+            ("reannounce_torrent", json!({ "hash": "abc" })),
+            ("recheck_torrent", json!({ "hash": "abc" })),
+            ("get_torrent_files", json!({ "hash": "abc" })),
+            ("get_torrent_properties", json!({ "hash": "abc" })),
+            (
+                "create_category",
+                json!({ "name": "test", "save_path": "/tmp" }),
+            ),
+            (
+                "set_torrent_category",
+                json!({ "hashes": "abc", "category": "test" }),
+            ),
+            ("get_categories", json!({})),
+            ("add_torrent_tags", json!({ "hashes": "abc", "tags": "t1" })),
+            (
+                "wait_for_torrent_status",
+                json!({ "hash": "abc", "target_status": "downloading" }),
+            ),
+            ("cleanup_completed", json!({ "delete_files": false })),
+            (
+                "mass_rename",
+                json!({ "hash": "abc", "pattern": ".*", "replacement": "new" }),
+            ),
+            ("find_duplicates", json!({})),
+            (
+                "set_torrent_share_limits",
+                json!({ "hashes": "abc", "ratio_limit": 1.0, "seeding_time_limit": 60 }),
+            ),
+            ("set_torrent_speed_limits", json!({ "hashes": "abc" })),
+            ("toggle_sequential_download", json!({ "hashes": "abc" })),
+            (
+                "toggle_first_last_piece_priority",
+                json!({ "hashes": "abc" }),
+            ),
+            ("set_force_start", json!({ "hashes": "abc", "value": true })),
+            (
+                "set_super_seeding",
+                json!({ "hashes": "abc", "value": true }),
+            ),
+            (
+                "add_trackers",
+                json!({ "hashes": "abc", "urls": "http://t.com" }),
+            ),
+            (
+                "edit_tracker",
+                json!({ "hash": "abc", "orig_url": "u1", "new_url": "u2" }),
+            ),
+            ("remove_trackers", json!({ "hashes": "abc", "urls": "u1" })),
+            (
+                "rename_folder",
+                json!({ "hash": "abc", "old_path": "p1", "new_path": "p2" }),
+            ),
+            (
+                "set_file_priority",
+                json!({ "hash": "abc", "id": "0", "priority": 1 }),
+            ),
+            ("remove_categories", json!({ "categories": "c1" })),
+            ("remove_tags", json!({ "hashes": "abc", "tags": "t1" })),
+            ("create_tags", json!({ "tags": "t1" })),
+            ("delete_tags", json!({ "tags": "t1" })),
+            ("search_torrents", json!({ "query": "linux" })),
+            ("install_search_plugin", json!({ "url": "http://p.com" })),
+            ("uninstall_search_plugin", json!({ "name": "p1" })),
+            (
+                "enable_search_plugin",
+                json!({ "name": "p1", "enable": true }),
+            ),
+            ("update_search_plugins", json!({})),
+            ("get_search_plugins", json!({})),
+            (
+                "add_rss_feed",
+                json!({ "url": "http://r.com", "path": "p1" }),
+            ),
+            ("get_rss_feeds", json!({})),
+            ("set_rss_rule", json!({ "name": "r1", "definition": "{}" })),
+            ("get_rss_rules", json!({})),
+            (
+                "move_rss_item",
+                json!({ "item_path": "p1", "dest_path": "p2" }),
+            ),
+            ("get_global_transfer_info", json!({})),
+            ("set_global_transfer_limits", json!({})),
+            ("toggle_alternative_speed_limits", json!({})),
+            ("get_speed_limits_mode", json!({})),
+            ("ban_peers", json!({ "peers": "1.1.1.1:80" })),
+            ("get_app_preferences", json!({})),
+            ("set_app_preferences", json!({ "preferences": "{}" })),
+            ("get_main_log", json!({})),
+            ("get_peer_log", json!({})),
+            ("get_app_version", json!({})),
+            ("get_build_info", json!({})),
+            ("shutdown_app", json!({})),
+        ];
+
+        for (name, args) in tools_to_test {
+            let req = JsonRpcRequest {
+                jsonrpc: "2.0".to_string(),
+                method: "tools/call".to_string(),
+                params: Some(json!({ "name": name, "arguments": args })),
+                id: Some(json!(1)),
+            };
+
+            let resp = server.handle_request(req).await;
+            if let Some(error) = resp.ok().and_then(|r| r.get("error").cloned()) {
+                assert_ne!(
+                    error["message"], "Method not found",
+                    "Tool {} not found in routing",
+                    name
+                );
+                assert_ne!(
+                    error["message"],
+                    format!("Unknown tool: {}", name),
+                    "Tool {} not found in tool mapping",
+                    name
+                );
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_resource_routing() {
+        let client = QBitClient::new("http://localhost:8080", "admin", "adminadmin", false);
+        let mut clients = HashMap::new();
+        clients.insert("default".to_string(), client);
+        let server = McpServer::new(clients, false);
+
+        let uris = vec![
+            "qbittorrent://default/torrents",
+            "qbittorrent://default/transfer",
+            "qbittorrent://default/categories",
+        ];
+
+        for uri in uris {
+            let req = JsonRpcRequest {
+                jsonrpc: "2.0".to_string(),
+                method: "resources/read".to_string(),
+                params: Some(json!({ "uri": uri })),
+                id: Some(json!(1)),
+            };
+            let resp = server.handle_request(req).await.unwrap();
+            if let Some(error) = resp.get("error") {
+                assert_ne!(error["message"], format!("Resource not found: {}", uri));
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_event_loop_init() {
+        let client = QBitClient::new("http://localhost:8080", "admin", "adminadmin", false);
+        let mut clients = HashMap::new();
+        clients.insert("default".to_string(), client);
+        let server = McpServer::new(clients, false);
+
+        // Test start_event_loop doesn't panic
+        server.start_event_loop(10);
+        // Give it a tiny bit of time to run
+        sleep(Duration::from_millis(50)).await;
+    }
+
+    #[test]
+    fn test_push_notification() {
+        let clients = HashMap::new();
+        let server = McpServer::new(clients, false);
+        server.push_notification("test_method", json!({"param": "val"}));
+
+        let state = server.state.lock().unwrap();
+        assert_eq!(state.notification_queue.len(), 1);
+        assert_eq!(state.notification_queue[0]["method"], "test_method");
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_errors() {
+        let clients = HashMap::new();
+        let server = McpServer::new(clients, false);
+
+        // Unknown method
+        let req = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            method: "unknown_method".to_string(),
+            params: None,
+            id: Some(json!(1)),
+        };
+        let result = server.handle_request(req).await;
+        assert!(result.is_err());
+
+        // Missing params for prompts/get
+        let req = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            method: "prompts/get".to_string(),
+            params: None,
+            id: Some(json!(1)),
+        };
+        let result = server.handle_request(req).await;
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_resource_definitions() {
+        let mut clients = HashMap::new();
+        clients.insert(
+            "test".to_string(),
+            QBitClient::new("http://localhost", "a", "b", false),
+        );
+        let server = McpServer::new(clients, false);
+        let res = server.get_resource_definitions();
+        assert!(!res.is_empty());
+        // Should have qbittorrent://test/torrents etc.
+        let found = res
+            .iter()
+            .any(|r| r["uri"] == "qbittorrent://test/torrents");
+        assert!(found);
+    }
 }

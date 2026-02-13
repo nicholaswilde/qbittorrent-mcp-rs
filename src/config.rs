@@ -234,3 +234,92 @@ fn parse_args(args: Vec<String>) -> ArgMatches {
         cmd.get_matches_from(args)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_instances_fallback() {
+        let config = AppConfig {
+            instances: None,
+            qbittorrent_host: "legacy_host".to_string(),
+            qbittorrent_port: Some(1234),
+            qbittorrent_username: Some("user".to_string()),
+            qbittorrent_password: Some("pass".to_string()),
+            server_mode: "stdio".to_string(),
+            lazy_mode: false,
+            no_verify_ssl: true,
+            log_level: "info".to_string(),
+            log_file_enable: false,
+            log_dir: ".".to_string(),
+            log_filename: "test.log".to_string(),
+            log_rotate: "daily".to_string(),
+            http_auth_token: None,
+            polling_interval_ms: 1000,
+        };
+
+        let instances = config.get_instances();
+        assert_eq!(instances.len(), 1);
+        assert_eq!(instances[0].name, "default");
+        assert_eq!(instances[0].host, "legacy_host");
+        assert_eq!(instances[0].port, Some(1234));
+        assert_eq!(instances[0].no_verify_ssl, Some(true));
+    }
+
+    #[test]
+    fn test_load_with_various_args() {
+        let args = vec![
+            "app".to_string(),
+            "--lazy".to_string(),
+            "--no-verify-ssl".to_string(),
+            "--log-file-enable".to_string(),
+        ];
+        let config = AppConfig::load(None, args).unwrap();
+        assert!(config.lazy_mode);
+        assert!(config.no_verify_ssl);
+        assert!(config.log_file_enable);
+    }
+
+    #[test]
+    fn test_get_instances_multiple() {
+        let config = AppConfig {
+            instances: Some(vec![
+                QBitInstance {
+                    name: "i1".into(),
+                    host: "h1".into(),
+                    port: None,
+                    username: None,
+                    password: None,
+                    no_verify_ssl: None,
+                },
+                QBitInstance {
+                    name: "i2".into(),
+                    host: "h2".into(),
+                    port: None,
+                    username: None,
+                    password: None,
+                    no_verify_ssl: None,
+                },
+            ]),
+            qbittorrent_host: "h".into(),
+            qbittorrent_port: None,
+            qbittorrent_username: None,
+            qbittorrent_password: None,
+            server_mode: "stdio".into(),
+            lazy_mode: false,
+            no_verify_ssl: false,
+            log_level: "info".into(),
+            log_file_enable: false,
+            log_dir: ".".into(),
+            log_filename: "f".into(),
+            log_rotate: "d".into(),
+            http_auth_token: None,
+            polling_interval_ms: 100,
+        };
+        let instances = config.get_instances();
+        assert_eq!(instances.len(), 2);
+        assert_eq!(instances[0].name, "i1");
+        assert_eq!(instances[1].name, "i2");
+    }
+}

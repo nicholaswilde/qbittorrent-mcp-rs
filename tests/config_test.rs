@@ -64,6 +64,33 @@ fn test_cli_overrides() {
 }
 
 #[test]
+fn test_cli_overrides_extended() {
+    let args = vec![
+        "app".to_string(),
+        "--qbittorrent-username".to_string(),
+        "admin".to_string(),
+        "--qbittorrent-password".to_string(),
+        "password".to_string(),
+        "--http-auth-token".to_string(),
+        "token".to_string(),
+        "--log-dir".to_string(),
+        "/tmp".to_string(),
+        "--log-filename".to_string(),
+        "qbit.log".to_string(),
+        "--log-rotate".to_string(),
+        "hourly".to_string(),
+    ];
+    let config = AppConfig::load(None, args).expect("Failed to load config with extended CLI args");
+
+    assert_eq!(config.qbittorrent_username, Some("admin".to_string()));
+    assert_eq!(config.qbittorrent_password, Some("password".to_string()));
+    assert_eq!(config.http_auth_token, Some("token".to_string()));
+    assert_eq!(config.log_dir, "/tmp");
+    assert_eq!(config.log_filename, "qbit.log");
+    assert_eq!(config.log_rotate, "hourly");
+}
+
+#[test]
 fn test_polling_interval_config() {
     let args = vec![
         "app".to_string(),
@@ -72,4 +99,15 @@ fn test_polling_interval_config() {
     ];
     let config = AppConfig::load(None, args).expect("Failed to load config");
     assert_eq!(config.polling_interval_ms, 5000);
+}
+
+#[test]
+fn test_load_config_invalid_toml() {
+    let dir = tempdir().unwrap();
+    let file_path = dir.path().join("invalid.toml");
+    let mut file = File::create(&file_path).unwrap();
+    writeln!(file, "invalid = [toml").unwrap(); // Malformed TOML
+
+    let result = AppConfig::load(Some(file_path.to_str().unwrap().to_string()), vec![]);
+    assert!(result.is_err());
 }

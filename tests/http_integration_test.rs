@@ -245,3 +245,100 @@ async fn test_http_mcp_error_response() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_http_handle_post_error_status() -> Result<()> {
+    let (base_url, _handle) = setup_test_server(None).await;
+    let client = reqwest::Client::new();
+
+    // Need a session first
+    let mut source = client
+        .get(format!("{}/sse", base_url))
+        .send()
+        .await?
+        .bytes_stream();
+    let first_chunk = timeout(Duration::from_secs(2), source.next())
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("Expected endpoint event"))??;
+    let first_chunk_str = String::from_utf8_lossy(&first_chunk);
+    let session_id = first_chunk_str.split("session_id=").last().unwrap().trim();
+
+    // Call with invalid method to trigger handle_request error
+    let req_body = json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "invalid_method",
+        "params": {}
+    });
+
+    let resp = client
+        .post(format!("{}/message?session_id={}", base_url, session_id))
+        .json(&req_body)
+        .send()
+        .await?;
+
+    assert_eq!(resp.status(), reqwest::StatusCode::ACCEPTED);
+
+    // Expect 'message' event in SSE with error
+    let second_chunk = timeout(Duration::from_secs(2), source.next())
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("Expected message event"))??;
+    let second_chunk_str = String::from_utf8_lossy(&second_chunk);
+
+    assert!(second_chunk_str.contains("event: message"));
+    assert!(second_chunk_str.contains("\"error\":"));
+    assert!(second_chunk_str.contains("\"message\":\"Method not found: invalid_method\""));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_http_sse_notification() -> Result<()> {
+    let (base_url, _handle) = setup_test_server(None).await;
+    let client = reqwest::Client::new();
+
+    // 1. Connect to SSE
+    let mut source = client
+        .get(format!("{}/sse", base_url))
+        .send()
+        .await?
+        .bytes_stream();
+
+    // 2. Expect 'endpoint' event
+    let first_chunk = timeout(Duration::from_secs(2), source.next())
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("Expected endpoint event"))??;
+    let first_chunk_str = String::from_utf8_lossy(&first_chunk);
+    let session_id = first_chunk_str.split("session_id=").last().unwrap().trim();
+
+    // 3. Call tool 'show_all_tools' which sets should_notify = true
+    let req_body = json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": { "name": "show_all_tools", "arguments": {} }
+    });
+
+    client
+        .post(format!("{}/message?session_id={}", base_url, session_id))
+        .json(&req_body)
+        .send()
+        .await?;
+
+    // 4. Expect 'message' event (tool response)
+    let _ = timeout(Duration::from_secs(2), source.next())
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("Expected message event"))??;
+
+    // 5. Expect 'message' event (notification)
+    // The server loop checks should_notify every 100ms
+    let third_chunk = timeout(Duration::from_secs(2), source.next())
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("Expected notification event"))??;
+    let third_chunk_str = String::from_utf8_lossy(&third_chunk);
+
+    assert!(third_chunk_str.contains("event: message"));
+    assert!(third_chunk_str.contains("notifications/tools/list_changed"));
+
+    Ok(())
+}
