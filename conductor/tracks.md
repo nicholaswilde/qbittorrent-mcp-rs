@@ -11,9 +11,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 *Link: [./tracks/gemini_extension_20260212/](./tracks/gemini_extension_20260212/)*
 - [ ] **Track: HTTP Mode Integration Testing**
 *Link: [./tracks/http_mode_testing_20260213/](./tracks/http_mode_testing_20260213/)*
-- [x] [GitHub Release Summary Command](./tracks/release_summary_20260213/plan.md)
-
 ## Archived Tracks
+- [GitHub Release Summary Command](./archive/release_summary_20260213/plan.md)
 - [Increase code coverage to >90% with Coveralls](./archive/coverage_90_coveralls_20260213/plan.md)
 - [Create code coverage using lcov and llvm-cov](./archive/code_coverage_20260213/plan.md)
 - [MCP Best Practices & Rules of Engagement](./archive/mcp_best_practices_20260212/plan.md)
