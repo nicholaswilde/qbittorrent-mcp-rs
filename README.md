@@ -265,6 +265,18 @@ export COVERALLS_REPO_TOKEN=your_token_here
 task coverage:upload
 ```
 
+#### Release Management
+
+This project includes a `gemini-cli` command to help generate GitHub release summaries based on your local git log.
+
+```bash
+# Summarize changes between the latest two tags (automatic)
+gemini release:summary
+
+# Summarize changes for a specific range or tag
+gemini release:summary --range v0.3.0..v0.3.1
+```
+
 ## :mag: Troubleshooting
 
 ### Connection & Authentication Issues

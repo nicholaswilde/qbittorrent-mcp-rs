@@ -27,13 +27,13 @@ Implement the parsing of `git log` and the categorization of commits into featur
 ## Phase 3: Formatting and Integration
 Generate the final Markdown output and integrate it into the `gemini-cli` command.
 
-- [ ] Task: Implement Markdown generation.
-    - [ ] Sub-task: Write tests for Markdown formatting (ensuring triple backticks for code, no line numbers).
-    - [ ] Sub-task: Implement final string assembly.
-- [ ] Task: Finalize the `release:summary` command TOML.
-    - [ ] Sub-task: Define the `description`, `parameters`, and `prompt` in the TOML file.
-- [ ] Task: Documentation update.
-    - [ ] Sub-task: Update `README.md` to include instructions for the new `release:summary` command.
+- [x] Task: Implement Markdown generation.
+    - [x] Sub-task: Write tests for Markdown formatting (ensuring triple backticks for code, no line numbers).
+    - [x] Sub-task: Implement final string assembly.
+- [x] Task: Finalize the `release:summary` command TOML.
+    - [x] Sub-task: Define the `description`, `parameters`, and `prompt` in the TOML file.
+- [x] Task: Documentation update.
+    - [x] Sub-task: Update `README.md` to include instructions for the new `release:summary` command.
 - [ ] Task: Quality Gate Check.
     - [ ] Sub-task: Verify total project coverage and adherence to all project standards.
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Formatting and Integration' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Formatting and Integration' (Protocol in workflow.md)
