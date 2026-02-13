@@ -129,6 +129,13 @@ And templates for deep inspection:
 
 ## :gear: Installation
 
+### Homebrew
+
+```bash
+brew tap nicholaswilde/tap
+brew install qbittorrent-mcp-rs
+```
+
 ### From Source
 
 ```bash
