@@ -9,6 +9,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 ## Incomplete Tracks
 - [ ] **Track: Gemini CLI Extension for qBittorrent MCP**
 *Link: [./tracks/gemini_extension_20260212/](./tracks/gemini_extension_20260212/)*
+- [ ] **Track: HTTP Mode Integration Testing**
+*Link: [./tracks/http_mode_testing_20260213/](./tracks/http_mode_testing_20260213/)*
 
 ## Archived Tracks
 - [MCP Best Practices & Rules of Engagement](./archive/mcp_best_practices_20260212/plan.md)
