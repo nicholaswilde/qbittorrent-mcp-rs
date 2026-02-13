@@ -1,5 +1,5 @@
 # :magnet: qBittorrent MCP Server (Rust) :robot:
-
+[![Coveralls](https://img.shields.io/coveralls/github/nicholaswilde/qbittorrent-mcp-rs/main?style=for-the-badge&logo=coveralls)](https://coveralls.io/github/nicholaswilde/qbittorrent-mcp-rs?branch=main)
 [![task](https://img.shields.io/badge/Task-Enabled-brightgreen?style=for-the-badge&logo=task&logoColor=white)](https://taskfile.dev/#/)
 [![ci](https://img.shields.io/github/actions/workflow/status/nicholaswilde/qbittorrent-mcp-rs/ci.yml?label=ci&style=for-the-badge&branch=main)](https://github.com/nicholaswilde/qbittorrent-mcp-rs/actions/workflows/ci.yml)
 
