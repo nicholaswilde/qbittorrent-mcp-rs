@@ -11,6 +11,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 *Link: [./tracks/gemini_extension_20260212/](./tracks/gemini_extension_20260212/)*
 - [ ] **Track: HTTP Mode Integration Testing**
 *Link: [./tracks/http_mode_testing_20260213/](./tracks/http_mode_testing_20260213/)*
+- [ ] **Track: GitHub Release Summary Command**
+*Link: [./tracks/release_summary_20260213/](./tracks/release_summary_20260213/)*
 
 ## Archived Tracks
 - [Increase code coverage to >90% with Coveralls](./archive/coverage_90_coveralls_20260213/plan.md)
