@@ -5,7 +5,6 @@ This file tracks all major tracks for the project. Each track has its own detail
 ## Completed Tracks
 - [x] [Feature Expansion & Polish](./tracks/feature_expansion_20260126/plan.md)
 - [x] [Comprehensive Testing](./tracks/comprehensive_testing/plan.md)
-- [x] [Create code coverage using lcov and llvm-cov](./tracks/code_coverage_20260213/plan.md)
 
 ## Incomplete Tracks
 - [ ] **Track: Gemini CLI Extension for qBittorrent MCP**
@@ -14,6 +13,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 *Link: [./tracks/http_mode_testing_20260213/](./tracks/http_mode_testing_20260213/)*
 
 ## Archived Tracks
+- [Create code coverage using lcov and llvm-cov](./archive/code_coverage_20260213/plan.md)
 - [MCP Best Practices & Rules of Engagement](./archive/mcp_best_practices_20260212/plan.md)
 - [Core Foundation](./archive/core_foundation_20260123/plan.md)
 - [CI Docker Integration](./archive/ci_docker_integration_20260126/plan.md)
