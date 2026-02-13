@@ -9,13 +9,13 @@ Codify the rules of engagement within the project's management documents.
 - [x] Task: Update `conductor/product-guidelines.md` to reference the new rules of engagement.
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Conductor Documentation Updates' (Protocol in workflow.md)
 
-## Phase 2: Tool Metadata Enhancement
+## Phase 2: Tool Metadata Enhancement [checkpoint: 61b2741]
 Update the MCP tool definitions in code to include safety and behavioral instructions.
 
 - [x] Task: Identify all destructive or state-changing tools in `src/server/mcp.rs`.
 - [x] Task: Update tool descriptions for `delete_torrent`, `pause_torrent`, `resume_torrent`, and `shutdown_app` with confirmation and state-check requirements.
 - [x] Task: Update search-related tool descriptions with etiquette instructions (e.g., polling requirements).
-- [~] Task: Conductor - User Manual Verification 'Phase 2: Tool Metadata Enhancement' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Tool Metadata Enhancement' (Protocol in workflow.md)
 
 ## Phase 3: MCP Prompts Implementation
 Expose the rules of engagement as a machine-readable prompt resource.
