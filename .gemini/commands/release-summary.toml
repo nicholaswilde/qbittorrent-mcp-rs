@@ -5,29 +5,32 @@ range = { type = "string", description = "Commit range or tag (e.g., v0.1.0..v0.
 
 [prompt]
 content = """
-You are an expert technical writer. Your task is to generate a professional and concise GitHub release summary.
+You are an expert technical writer specializing in software release notes. Generate a clean, professional GitHub release summary.
 
 **Input Range**: {{range}}
 
-**Instructions**:
-1.  **Categorization**: Parse the git log entries provided below. Group them into the following categories, using the exact emoji shortcode and header title:
-    -   :rocket: **Features** (for `feat` type commits)
-    -   :bug: **Bug Fixes** (for `fix` type commits)
-    -   :sparkles: **Improvements** (for `refactor`, `perf`, `style` type commits)
-    -   :memo: **Documentation** (for `docs` type commits)
-    -   :gear: **Maintenance** (for `chore`, `test`, `build`, `ci` type commits)
-2.  **Formatting**:
-    -   Use a bulleted list for each category.
-    -   If a category has no entries, omit it entirely.
-    -   Exclude the type prefix (e.g., "feat:", "fix:") from the final bullet point text, but keep the scope if present (e.g., "auth: add google sso").
-    -   Do not include commit hashes in the final output unless requested (keep it clean).
-    -   Ensure all code snippets or technical terms are wrapped in backticks.
-    -   Use triple backticks (```) for multi-line examples if necessary.
-    -   **No line numbers** anywhere.
-3.  **Tone**: Professional, direct, and helpful.
-
-**Git Log Content**:
+**Git Log Entries**:
 $(git log --pretty=format:"- %s" {{range}})
+
+**Your Task**:
+1.  **Categorize** the above commits into these sections (using `###` for headers):
+    -   ### :rocket: **New Features** (for `feat` type)
+    -   ### :bug: **Bug Fixes** (for `fix` type)
+    -   ### :sparkles: **Improvements** (for `refactor`, `perf`, `style` type)
+    -   ### :memo: **Documentation** (for `docs` type)
+2.  **Clean up** the text:
+    -   Strip the type prefix (e.g., "feat:", "fix:").
+    -   If a scope is present (e.g., "auth:"), keep it.
+    -   Ensure the first letter of each bullet is capitalized.
+    -   Use backticks for technical terms (e.g., `reqwest`, `axum`, `AppConfig`).
+3.  **Strict Formatting**:
+    -   **No line numbers** in code blocks or text.
+    -   Use triple backticks (```) for any code blocks.
+    -   **Omit sections** that have no changes.
+    -   Do not include commit hashes.
+4.  **Tone**: Direct, professional, and technical.
+5.  **Changelog Link**: At the bottom, add a link to the full changelog:
+    **Full Changelog**: https://github.com/nicholaswilde/qbittorrent-mcp-rs/compare/$(echo {{range}} | sed 's/\.\./.../g')
 
 **Output**:
 (Generate the Markdown summary below)
