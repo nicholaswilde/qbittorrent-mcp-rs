@@ -48,3 +48,4 @@ test_bg.log
 lcov.info
 coverage/
 /target/llvm-cov/
+.env

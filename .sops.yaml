@@ -1,0 +1,11 @@
+---
+creation_rules:
+  - filename_regex: \.ya?ml$
+    age: 'age1x2at6wwq2gks47fsep9a25emdeqd93e3k0gfsswtmhruqrteu5jqjvy7kd'
+  - filename_regex: \.db$
+    age: 'age1x2at6wwq2gks47fsep9a25emdeqd93e3k0gfsswtmhruqrteu5jqjvy7kd'
+  - filename_regex: \.h$
+    age: 'age1x2at6wwq2gks47fsep9a25emdeqd93e3k0gfsswtmhruqrteu5jqjvy7kd'
+  - filename_regex: \.env$
+    age: 'age1x2at6wwq2gks47fsep9a25emdeqd93e3k0gfsswtmhruqrteu5jqjvy7kd'
+    

@@ -1,20 +1,40 @@
 ---
 version: '3'
 
+dotenv: ['.env']
+
 vars:
   LOCAL_IP:
     sh: hostname -I | awk '{print $1}'
 
 tasks:
+  encrypt:
+    desc: Encrypt files using SOPS
+    preconditions:
+      - sh: test -f .env
+        msg: ".env file doens't exist"
+    cmds:
+      - sops -e --input-type dotenv --output-type dotenv .env > .env.enc
+
+  decrypt:
+    desc: Decrypt files using SOPS
+    preconditions:
+      - sh: test -f .env.enc
+        msg: ".env.enc doesn't exist"
+    cmds:
+      - sops -d --input-type dotenv --output-type dotenv .env.enc > .env
+
   coverage:
     desc: Run code coverage and generate lcov.info
     cmds:
       - cargo llvm-cov
       - cargo llvm-cov --lcov --output-path ./lcov.info
   coverage:upload:
-    desc: Upload lcov.info to Coveralls (requires COVERALLS_REPO_TOKEN)
+    desc: Upload all coverage reports to Coveralls
     cmds:
-      - coveralls --lcov lcov.info
+      - coveralls report lcov.info -n -r {{ .COVERALLS_REPO_TOKEN }}
+    silent: true
+
   clippy:
     desc: Run cargo clippy
     cmds:
