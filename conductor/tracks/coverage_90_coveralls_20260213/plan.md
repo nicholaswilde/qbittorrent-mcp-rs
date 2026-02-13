@@ -5,12 +5,12 @@ This plan outlines the steps to reach >90% code coverage and integrate manual re
 ## Phase 1: HTTP Server Integration Testing
 Target the 0% coverage area in `server/http.rs`.
 
-- [ ] Task: Implement integration tests for the HTTP server transport.
-    - [ ] Create `tests/http_integration_test.rs`.
-    - [ ] Write tests for SSE session initialization and endpoint discovery.
-    - [ ] Write tests for JSON-RPC request/response cycle over HTTP.
-    - [ ] Write tests for authentication middleware (Header and Query Parameter).
-- [ ] Task: Verify coverage for `server/http.rs` reaches >80%.
+- [x] Task: Implement integration tests for the HTTP server transport.
+    - [x] Create `tests/http_integration_test.rs`.
+    - [x] Write tests for SSE session initialization and endpoint discovery.
+    - [x] Write tests for JSON-RPC request/response cycle over HTTP.
+    - [x] Write tests for authentication middleware (Header and Query Parameter).
+- [~] Task: Verify coverage for `server/http.rs` reaches >80%.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: HTTP Server Integration Testing' (Protocol in workflow.md)
 
 ## Phase 2: MCP Tool Handler Expansion

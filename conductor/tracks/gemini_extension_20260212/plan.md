@@ -5,9 +5,9 @@ This plan outlines the steps required to package and expose the `qbittorrent-mcp
 ## Phase 1: Extension Scaffolding and Manifest
 Establish the foundational extension structure required by the Gemini CLI.
 
-- [ ] Task: Research Gemini CLI extension manifest requirements and directory structure.
-- [ ] Task: Create the extension manifest file (e.g., `gemini-extension.json` or as specified by docs).
-- [ ] Task: Define the `qbittorrent` command namespace and root entry point.
+- [x] Task: Research Gemini CLI extension manifest requirements and directory structure.
+- [x] Task: Create the extension manifest file (e.g., `gemini-extension.json` or as specified by docs).
+- [~] Task: Define the `qbittorrent` command namespace and root entry point.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Extension Scaffolding and Manifest' (Protocol in workflow.md)
 
 ## Phase 2: Binary Management and Installation Logic

@@ -34,19 +34,14 @@ struct MessageParams {
     session_id: String,
 }
 
-pub async fn run_http_server(
-    mcp_server: McpServer,
-    host: &str,
-    port: u16,
-    auth_token: Option<String>,
-) -> anyhow::Result<()> {
+pub async fn create_router(mcp_server: McpServer, auth_token: Option<String>) -> Router {
     let state = AppState {
         mcp_server,
         sessions: Arc::new(DashMap::new()),
         auth_token,
     };
 
-    let app = Router::new()
+    Router::new()
         .route("/sse", get(sse_handler))
         .route("/message", post(message_handler))
         .layer(middleware::from_fn_with_state(
@@ -55,7 +50,16 @@ pub async fn run_http_server(
         ))
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
-        .with_state(state);
+        .with_state(state)
+}
+
+pub async fn run_http_server(
+    mcp_server: McpServer,
+    host: &str,
+    port: u16,
+    auth_token: Option<String>,
+) -> anyhow::Result<()> {
+    let app = create_router(mcp_server, auth_token).await;
 
     let addr = format!("{}:{}", host, port);
     info!("Starting HTTP MCP Server on {}", addr);
