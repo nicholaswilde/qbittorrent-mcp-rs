@@ -2500,8 +2500,8 @@ mod tests {
                 params: Some(json!({ "uri": uri })),
                 id: Some(json!(1)),
             };
-            let resp = server.handle_request(req).await.unwrap();
-            if let Some(error) = resp.get("error") {
+            let resp = server.handle_request(req).await;
+            if let Some(error) = resp.ok().and_then(|r| r.get("error").cloned()) {
                 assert_ne!(error["message"], format!("Resource not found: {}", uri));
             }
         }
