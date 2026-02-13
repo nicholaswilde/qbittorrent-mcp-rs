@@ -5,8 +5,8 @@ This plan details the steps to implement behavioral rules and best practices for
 ## Phase 1: Conductor Documentation Updates
 Codify the rules of engagement within the project's management documents.
 
-- [ ] Task: Create `conductor/mcp-rules.md` with adapted rules (Verify state, Semantic feedback, Idempotency, Security).
-- [ ] Task: Update `conductor/product-guidelines.md` to reference the new rules of engagement.
+- [x] Task: Create `conductor/mcp-rules.md` with adapted rules (Verify state, Semantic feedback, Idempotency, Security).
+- [x] Task: Update `conductor/product-guidelines.md` to reference the new rules of engagement.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Conductor Documentation Updates' (Protocol in workflow.md)
 
 ## Phase 2: Tool Metadata Enhancement
