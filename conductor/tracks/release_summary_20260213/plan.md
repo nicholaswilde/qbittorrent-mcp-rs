@@ -24,7 +24,7 @@ Implement the parsing of `git log` and the categorization of commits into featur
     - [x] Sub-task: Implement mapping (e.g., `feat` -> `:sparkles:`, `fix` -> `:bug:`, etc.).
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Log Parsing and Categorization' (Protocol in workflow.md)
 
-## Phase 3: Formatting and Integration
+## Phase 3: Formatting and Integration [checkpoint: 3764993]
 Generate the final Markdown output and integrate it into the `gemini-cli` command.
 
 - [x] Task: Implement Markdown generation.
