@@ -274,8 +274,15 @@ This project includes a `gemini-cli` command to help generate GitHub release sum
 gemini release:summary
 
 # Summarize changes for a specific range or tag
-gemini release:summary --range v0.3.0..v0.3.1
+gemini release:summary --range v0.3.2..v0.3.3
 ```
+
+### Secrets Management
+
+The project uses [SOPS](https://github.com/getsops/sops) for encrypting sensitive files like `.env`.
+
+- **Encrypt**: `task encrypt` (requires `.env`)
+- **Decrypt**: `task decrypt` (requires `.env.enc`)
 
 ## :mag: Troubleshooting
 
