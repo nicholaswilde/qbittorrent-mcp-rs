@@ -17,13 +17,13 @@ Update the MCP tool definitions in code to include safety and behavioral instruc
 - [x] Task: Update search-related tool descriptions with etiquette instructions (e.g., polling requirements).
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Tool Metadata Enhancement' (Protocol in workflow.md)
 
-## Phase 3: MCP Prompts Implementation
+## Phase 3: MCP Prompts Implementation [checkpoint: de3a1c5]
 Expose the rules of engagement as a machine-readable prompt resource.
 
 - [x] Task: Define a new MCP prompt named `rules-of-engagement` in `src/server/mcp.rs`.
 - [x] Task: Implement the logic to return the system directive/best practices text when this prompt is requested.
-- [~] Task: Write unit tests to verify the prompt resource is correctly registered and returns the expected text.
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: MCP Prompts Implementation' (Protocol in workflow.md)
+- [x] Task: Write unit tests to verify the prompt resource is correctly registered and returns the expected text.
+- [x] Task: Conductor - User Manual Verification 'Phase 3: MCP Prompts Implementation' (Protocol in workflow.md)
 
 ## Phase 4: Verification and Final Polish
 Ensure all acceptance criteria are met across documentation and code.
