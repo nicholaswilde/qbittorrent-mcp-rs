@@ -12,6 +12,7 @@ To build a robust and efficient Model Context Protocol (MCP) server using Rust t
 - **Information Retrieval:** Query active downloads, upload/download speeds, and completion status.
 - **Configuration:** Support for `config.toml`, `config.yaml`, or `config.json` files to configure the server. All configuration options can also be passed via command-line arguments, which will override file-based settings.
 - **Dual Server Mode:** Support for both stdio (CLI) and HTTP server modes.
+- **Release Management:** Integrated `gemini-cli` command to generate release summaries from git logs.
 - **Safety:** Read-only mode options and secure API handling.
 
 ## Target Audience
