@@ -5,13 +5,13 @@ This plan outlines the steps to create the `release:summary` command, which gene
 ## Phase 1: Command Structure and Range Detection
 Set up the command file and implement the logic to identify the commit range to summarize.
 
-- [ ] Task: Initialize directory structure and `.gemini/commands/release-summary.toml`.
-- [ ] Task: Implement range detection logic.
-    - [ ] Sub-task: Write tests for automatic range detection (latest tag vs. previous tag).
-    - [ ] Sub-task: Implement logic to find the latest and previous tags using `git tag --sort=-v:refname`.
-    - [ ] Sub-task: Write tests for manual range argument handling.
-    - [ ] Sub-task: Implement logic to accept a user-provided range or tag.
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Command Structure and Range Detection' (Protocol in workflow.md)
+- [x] Task: Initialize directory structure and `.gemini/commands/release-summary.toml`.
+- [x] Task: Implement range detection logic.
+    - [x] Sub-task: Write tests for automatic range detection (latest tag vs. previous tag).
+    - [x] Sub-task: Implement logic to find the latest and previous tags using `git tag --sort=-v:refname`.
+    - [x] Sub-task: Write tests for manual range argument handling.
+    - [x] Sub-task: Implement logic to accept a user-provided range or tag.
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Command Structure and Range Detection' (Protocol in workflow.md)
 
 ## Phase 2: Log Parsing and Categorization
 Implement the parsing of `git log` and the categorization of commits into features, fixes, etc.

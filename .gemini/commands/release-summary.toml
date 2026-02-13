@@ -1,0 +1,24 @@
+description = "Generates a GitHub release summary based on git logs."
+
+[parameters]
+range = { type = "string", description = "Commit range or tag (e.g., v0.1.0..v0.2.0).", sh = "TAGS=$(git tag --sort=-v:refname | head -n 2); LATEST=$(echo \"$TAGS\" | sed -n '1p'); PREVIOUS=$(echo \"$TAGS\" | sed -n '2p'); if [ -z \"$PREVIOUS\" ]; then echo \"HEAD\"; else echo \"$PREVIOUS..$LATEST\"; fi" }
+
+[prompt]
+content = """
+You are an expert technical writer. Generate a GitHub release summary for the following git log range: {{range}}
+
+Guidelines:
+1.  **Format**: Use standard GitHub-flavored Markdown.
+2.  **No Line Numbers**: Do not include line numbers in code blocks or lists.
+3.  **Code Blocks**: Use triple backticks (```) for all code snippets.
+4.  **Categorization**: Group changes into categories and use these emoji shortcodes:
+    -   :rocket: **Features** (feat)
+    -   :bug: **Bug Fixes** (fix)
+    -   :sparkles: **Improvements** (refactor, style)
+    -   :memo: **Documentation** (docs)
+    -   :gear: **Maintenance** (chore, test)
+5.  **Content**: Be concise but descriptive. Focus on the 'why' and 'what' changed.
+
+Git Log Content for range {{range}}:
+$(git log --pretty=format:"- %s (%h)" {{range}})
+"""
