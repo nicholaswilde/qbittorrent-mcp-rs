@@ -2,7 +2,7 @@
 
 This plan outlines the steps to create the `release:summary` command, which generates a categorized summary of changes for a release based on `git log`.
 
-## Phase 1: Command Structure and Range Detection
+## Phase 1: Command Structure and Range Detection [checkpoint: 4a52f1a]
 Set up the command file and implement the logic to identify the commit range to summarize.
 
 - [x] Task: Initialize directory structure and `.gemini/commands/release-summary.toml`.
