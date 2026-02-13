@@ -2,7 +2,7 @@
 
 This plan outlines the steps to reach >90% code coverage and integrate manual reporting to Coveralls.io.
 
-## Phase 1: HTTP Server Integration Testing
+## Phase 1: HTTP Server Integration Testing [checkpoint: 6213d8a]
 Target the 0% coverage area in `server/http.rs`.
 
 - [x] Task: Implement integration tests for the HTTP server transport.
@@ -10,8 +10,8 @@ Target the 0% coverage area in `server/http.rs`.
     - [x] Write tests for SSE session initialization and endpoint discovery.
     - [x] Write tests for JSON-RPC request/response cycle over HTTP.
     - [x] Write tests for authentication middleware (Header and Query Parameter).
-- [~] Task: Verify coverage for `server/http.rs` reaches >80%.
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: HTTP Server Integration Testing' (Protocol in workflow.md)
+- [x] Task: Verify coverage for `server/http.rs` reaches >80%.
+- [x] Task: Conductor - User Manual Verification 'Phase 1: HTTP Server Integration Testing' (Protocol in workflow.md)
 
 ## Phase 2: MCP Tool Handler Expansion
 Target the low coverage (~37%) in `server/mcp.rs`.
