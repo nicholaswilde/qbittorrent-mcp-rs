@@ -5,13 +5,13 @@ This file tracks all major tracks for the project. Each track has its own detail
 ## Completed Tracks
 - [x] [Feature Expansion & Polish](./tracks/feature_expansion_20260126/plan.md)
 - [x] [Comprehensive Testing](./tracks/comprehensive_testing/plan.md)
-- [x] [MCP Best Practices & Rules of Engagement](./tracks/mcp_best_practices_20260212/plan.md)
 
 ## Incomplete Tracks
 - [ ] **Track: Gemini CLI Extension for qBittorrent MCP**
 *Link: [./tracks/gemini_extension_20260212/](./tracks/gemini_extension_20260212/)*
 
 ## Archived Tracks
+- [MCP Best Practices & Rules of Engagement](./archive/mcp_best_practices_20260212/plan.md)
 - [Core Foundation](./archive/core_foundation_20260123/plan.md)
 - [CI Docker Integration](./archive/ci_docker_integration_20260126/plan.md)
 - [Docker Integration Testing](./archive/docker_integration_20260126/plan.md)
