@@ -499,6 +499,11 @@ impl McpServer {
                     }
                 ]
             }),
+            json!({
+                "name": "rules-of-engagement",
+                "description": "Get the behavioral rules and best practices for interacting with this qBittorrent MCP server",
+                "arguments": []
+            }),
         ]
     }
 
@@ -582,6 +587,32 @@ impl McpServer {
                                  and verify if alternative speed limits are accidentally enabled.",
                                 instance
                             )
+                        }
+                    }
+                ]
+            })),
+            "rules-of-engagement" => Ok(json!({
+                "description": "Rules of Engagement for qBittorrent MCP",
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": {
+                            "type": "text",
+                            "text": "Please provide the Rules of Engagement for this MCP server."
+                        }
+                    },
+                    {
+                        "role": "assistant",
+                        "content": {
+                            "type": "text",
+                            "text": "As an AI agent interacting with the qBittorrent MCP server, you must adhere to the following Rules of Engagement:\n\n\
+                                     1. **State Verification**: Always verify the current state of a torrent (via `list_torrents` or resources) before performing actions like pause, resume, or delete.\n\
+                                     2. **Destructive Actions**: Clearly inform the user and obtain confirmation before calling `delete_torrent` or `shutdown_app`. Specify if files will be deleted from disk.\n\
+                                     3. **Search Etiquette**: Search is asynchronous. Use `get_search_results` for polling and always call `stop_search` once finished to save resources.\n\
+                                     4. **Error Handling**: Treat errors as information for self-correction. Return helpful hints and use `isError: true` to prevent hallucination.\n\
+                                     5. **Idempotency**: Avoid redundant commands (e.g., do not pause an already paused torrent).\n\
+                                     6. **Semantic Feedback**: Translate technical tool results into meaningful context for the user.\n\
+                                     7. **Security**: Never expose sensitive credentials or session cookies in logs or to the user."
                         }
                     }
                 ]
@@ -2264,5 +2295,52 @@ impl McpServer {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_rules_of_engagement_prompt() {
+        let client = QBitClient::new("http://localhost:8080", "admin", "adminadmin", false);
+        let mut clients = HashMap::new();
+        clients.insert("default".to_string(), client);
+        let server = McpServer::new(clients, false);
+
+        // 1. Verify prompt is listed
+        let list_req = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            method: "prompts/list".to_string(),
+            params: None,
+            id: Some(json!(1)),
+        };
+        let list_resp = server.handle_request(list_req).await.unwrap();
+        let prompts = list_resp.get("prompts").unwrap().as_array().unwrap();
+        let rules_prompt = prompts.iter().find(|p| p["name"] == "rules-of-engagement");
+        assert!(rules_prompt.is_some());
+
+        // 2. Verify prompt content
+        let get_req = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            method: "prompts/get".to_string(),
+            params: Some(json!({ "name": "rules-of-engagement" })),
+            id: Some(json!(2)),
+        };
+        let get_resp = server.handle_request(get_req).await.unwrap();
+        let messages = get_resp.get("messages").unwrap().as_array().unwrap();
+
+        // Check for the rules message
+        let rules_msg = messages.iter().find(|m| m["role"] == "assistant").unwrap();
+        let text = rules_msg["content"]["text"].as_str().unwrap();
+
+        assert!(text.contains("State Verification"));
+        assert!(text.contains("Destructive Actions"));
+        assert!(text.contains("Search Etiquette"));
+        assert!(text.contains("Error Handling"));
+        assert!(text.contains("Idempotency"));
+        assert!(text.contains("Semantic Feedback"));
+        assert!(text.contains("Security"));
     }
 }

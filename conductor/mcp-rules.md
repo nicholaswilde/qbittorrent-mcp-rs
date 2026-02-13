@@ -18,15 +18,20 @@ Search operations in qBittorrent are asynchronous and can be resource-intensive.
 - **Rule:** Use `get_search_results` with a reasonable delay (e.g., 2-5 seconds) and polling interval.
 - **Rule:** Always call `stop_search` when the desired result is found to conserve server resources.
 
-## 4. Idempotency
+## 4. Error Handling as Context
+In a traditional API, an error is a failure. In MCP, an error is information the agent can use to self-correct.
+- **Return Hints, Not Just Codes:** Instead of returning "404 Not Found", return a string like "Torrent with hash 'abc' not found. Did you mean 'abd'?".
+- **Graceful Failures:** Use the `isError: true` flag in your JSON-RPC responses. This tells the client the tool failed so the LLM can try a different approach rather than hallucinating a success.
+
+## 5. Idempotency
 Avoid sending redundant commands that don't change the system state.
 - **Rule:** If a torrent is already paused, do not call `pause_torrent`.
 - **Rule:** If a category already exists, do not attempt to create it again without checking.
 
-## 5. Semantic Feedback
+## 6. Semantic Feedback
 When reporting the result of an MCP tool call to the user, translate technical success/failure into meaningful context.
 - **Example:** Instead of "Tool returned success," say "Successfully paused the Debian ISO torrent."
 
-## 6. Security & Privacy
+## 7. Security & Privacy
 - **Rule:** Never expose or log the WebUI password or sensitive session cookies.
 - **Rule:** Be cautious when adding torrents from untrusted URLs.
