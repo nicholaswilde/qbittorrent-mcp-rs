@@ -684,7 +684,7 @@ impl McpServer {
             }),
             json!({
                 "name": "pause_torrent",
-                "description": "Pause a torrent",
+                "description": "Pause a torrent. ALWAYS verify torrent exists and its current state via list_torrents before calling this.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -695,7 +695,7 @@ impl McpServer {
             }),
             json!({
                 "name": "resume_torrent",
-                "description": "Resume a torrent",
+                "description": "Resume a torrent. ALWAYS verify torrent exists and its current state via list_torrents before calling this.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -706,12 +706,12 @@ impl McpServer {
             }),
             json!({
                 "name": "delete_torrent",
-                "description": "Delete a torrent",
+                "description": "Delete a torrent. DESTRUCTIVE: Inform the user and confirm before calling, especially if delete_files is true.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "hash": { "type": "string", "description": "Torrent hash (pipe-separated for multiple)" },
-                        "delete_files": { "type": "boolean", "description": "Also delete files" }
+                        "delete_files": { "type": "boolean", "description": "Also delete files from disk" }
                     },
                     "required": ["hash", "delete_files"]
                 }
@@ -820,13 +820,13 @@ impl McpServer {
             }),
             json!({
                 "name": "cleanup_completed",
-                "description": "Remove completed torrents based on ratio or age",
+                "description": "Bulk remove completed torrents based on ratio or age. DESTRUCTIVE: Inform the user and confirm before calling.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "min_ratio": { "type": "number", "description": "Minimum ratio to trigger removal" },
                         "max_age_days": { "type": "integer", "description": "Maximum age in days since completion to trigger removal" },
-                        "delete_files": { "type": "boolean", "description": "Also delete downloaded files" }
+                        "delete_files": { "type": "boolean", "description": "Also delete downloaded files from disk" }
                     },
                     "required": ["delete_files"]
                 }
@@ -1041,7 +1041,7 @@ impl McpServer {
         vec![
             json!({
                 "name": "search_torrents",
-                "description": "Search for torrents (waits 5s for results)",
+                "description": "Search for torrents. ASYNCHRONOUS: Results might be incomplete on the first call. Use get_search_results for polling if needed.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -1285,7 +1285,7 @@ impl McpServer {
             }),
             json!({
                 "name": "shutdown_app",
-                "description": "Shutdown qBittorrent",
+                "description": "Shutdown qBittorrent. DESTRUCTIVE: Inform the user and confirm before calling as this terminates the service.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {},

@@ -12,10 +12,10 @@ Codify the rules of engagement within the project's management documents.
 ## Phase 2: Tool Metadata Enhancement
 Update the MCP tool definitions in code to include safety and behavioral instructions.
 
-- [ ] Task: Identify all destructive or state-changing tools in `src/server/mcp.rs`.
-- [ ] Task: Update tool descriptions for `delete_torrent`, `pause_torrent`, `resume_torrent`, and `shutdown_app` with confirmation and state-check requirements.
-- [ ] Task: Update search-related tool descriptions with etiquette instructions (e.g., polling requirements).
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Tool Metadata Enhancement' (Protocol in workflow.md)
+- [x] Task: Identify all destructive or state-changing tools in `src/server/mcp.rs`.
+- [x] Task: Update tool descriptions for `delete_torrent`, `pause_torrent`, `resume_torrent`, and `shutdown_app` with confirmation and state-check requirements.
+- [x] Task: Update search-related tool descriptions with etiquette instructions (e.g., polling requirements).
+- [~] Task: Conductor - User Manual Verification 'Phase 2: Tool Metadata Enhancement' (Protocol in workflow.md)
 
 ## Phase 3: MCP Prompts Implementation
 Expose the rules of engagement as a machine-readable prompt resource.
