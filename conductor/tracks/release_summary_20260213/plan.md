@@ -13,7 +13,7 @@ Set up the command file and implement the logic to identify the commit range to 
     - [x] Sub-task: Implement logic to accept a user-provided range or tag.
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Command Structure and Range Detection' (Protocol in workflow.md)
 
-## Phase 2: Log Parsing and Categorization
+## Phase 2: Log Parsing and Categorization [checkpoint: 4fbcc8d]
 Implement the parsing of `git log` and the categorization of commits into features, fixes, etc.
 
 - [x] Task: Implement commit parsing logic.
