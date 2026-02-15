@@ -25,10 +25,15 @@ tasks:
       - sops -d --input-type dotenv --output-type dotenv .env.enc > .env
 
   coverage:
-    desc: Run code coverage and generate lcov.info
+    desc: Run tests and generate coverage report (stdout summary)
     cmds:
-      - cargo llvm-cov
-      - cargo llvm-cov --lcov --output-path ./lcov.info
+      - cargo llvm-cov --all-features --workspace --summary-only
+
+  coverage:report:
+    desc: Run tests and generate LCOV coverage report (for Coveralls)
+    cmds:
+      - cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+
   coverage:upload:
     desc: Upload all coverage reports to Coveralls
     cmds:
