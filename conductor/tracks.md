@@ -11,6 +11,12 @@ This file tracks all major tracks for the project. Each track has its own detail
 *Link: [./tracks/gemini_extension_20260212/](./tracks/gemini_extension_20260212/)*
 - [ ] **Track: HTTP Mode Integration Testing**
 *Link: [./tracks/http_mode_testing_20260213/](./tracks/http_mode_testing_20260213/)*
+
+---
+
+- [ ] **Track: Help me implement best practices for MCP servers for this MCP server. Try to reduce the number of tokens used by unifying functions and not doing a one to one for the API calls.**
+*Link: [./tracks/mcp_optimization_20260215/](./tracks/mcp_optimization_20260215/)*
+
 ## Archived Tracks
 - [GitHub Release Summary Command](./archive/release_summary_20260213/plan.md)
 - [Increase code coverage to >90% with Coveralls](./archive/coverage_90_coveralls_20260213/plan.md)
