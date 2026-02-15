@@ -40,6 +40,7 @@ struct McpState {
     tools_loaded: bool,
     should_notify: bool,
     notification_queue: Vec<Value>,
+    running: bool,
 }
 
 #[derive(Clone)]
@@ -57,8 +58,19 @@ impl McpServer {
                 tools_loaded: !lazy_mode,
                 should_notify: false,
                 notification_queue: Vec::new(),
+                running: true,
             })),
         }
+    }
+
+    pub fn shutdown(&self) {
+        let mut state = self.state.lock().unwrap();
+        state.running = false;
+    }
+
+    pub fn is_running(&self) -> bool {
+        let state = self.state.lock().unwrap();
+        state.running
     }
 
     pub fn push_notification(&self, method: &str, params: Value) {
@@ -133,6 +145,10 @@ impl McpServer {
         let mut stdout = stdout();
 
         loop {
+            if !self.is_running() {
+                break;
+            }
+            tokio::task::yield_now().await;
             tokio::select! {
                 line_res = reader.next_line() => {
                     let line = match line_res? {
@@ -187,7 +203,10 @@ impl McpServer {
                     }
                     self.flush_notifications_async(&mut stdout).await?;
                 }
-                _ = sleep(Duration::from_millis(500)) => {
+                _ = sleep(Duration::from_millis(100)) => {
+                    if !self.is_running() {
+                        break;
+                    }
                     self.flush_notifications_async(&mut stdout).await?;
                 }
             }
@@ -2232,8 +2251,15 @@ impl McpServer {
         }
 
         loop {
+            if !self.is_running() {
+                break;
+            }
+            tokio::task::yield_now().await;
             sleep(Duration::from_millis(interval_ms)).await;
             for (name, client) in &self.clients {
+                if !self.is_running() {
+                    break;
+                }
                 let rid = *last_rids.get(name).unwrap_or(&0);
                 match client.get_main_data(rid).await {
                     Ok(data) => {
@@ -2291,7 +2317,11 @@ impl McpServer {
                             }
                         }
                     }
-                    Err(e) => error!("Polling error for instance {}: {}", name, e),
+                    Err(e) => {
+                        if self.is_running() {
+                            error!("Polling error for instance {}: {}", name, e);
+                        }
+                    }
                 }
             }
         }
@@ -2572,5 +2602,83 @@ mod tests {
             .iter()
             .any(|r| r["uri"] == "qbittorrent://test/torrents");
         assert!(found);
+    }
+
+    #[tokio::test]
+    async fn test_handle_prompt_variations() {
+        let clients = HashMap::new();
+        let server = McpServer::new(clients, false);
+
+        let prompts = vec![
+            (
+                "fix_stalled_torrent",
+                json!({ "hash": "abc", "instance": "inst1" }),
+            ),
+            ("analyze_disk_space", json!({ "instance": "inst1" })),
+            ("optimize_speed", json!({ "instance": "inst1" })),
+            ("troubleshoot_connection", json!({ "instance": "inst1" })),
+        ];
+
+        for (name, args) in prompts {
+            let res = server.handle_prompt_get(name, &args).await.unwrap();
+            assert!(res.get("description").is_some());
+        }
+
+        // Test error case: missing hash for fix_stalled_torrent
+        let res = server
+            .handle_prompt_get("fix_stalled_torrent", &json!({}))
+            .await;
+        assert!(res.is_err());
+
+        // Test error case: unknown prompt
+        let res = server.handle_prompt_get("unknown_prompt", &json!({})).await;
+        assert!(res.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_get_client_logic() {
+        let mut clients = HashMap::new();
+        clients.insert(
+            "inst1".to_string(),
+            QBitClient::new_no_auth("http://h1", false),
+        );
+        clients.insert(
+            "inst2".to_string(),
+            QBitClient::new_no_auth("http://h2", false),
+        );
+        let server = McpServer::new(clients, false);
+
+        // Explicit instance
+        assert_eq!(
+            server.get_client(Some("inst1")).unwrap().base_url(),
+            "http://h1"
+        );
+        assert_eq!(
+            server.get_client(Some("inst2")).unwrap().base_url(),
+            "http://h2"
+        );
+        assert!(server.get_client(Some("inst3")).is_err());
+
+        // Default logic (first one since no "default" key)
+        let default_client = server.get_client(None).unwrap();
+        assert!(
+            default_client.base_url() == "http://h1" || default_client.base_url() == "http://h2"
+        );
+
+        // With "default" key
+        let mut clients2 = HashMap::new();
+        clients2.insert(
+            "default".to_string(),
+            QBitClient::new_no_auth("http://default", false),
+        );
+        clients2.insert(
+            "other".to_string(),
+            QBitClient::new_no_auth("http://other", false),
+        );
+        let server2 = McpServer::new(clients2, false);
+        assert_eq!(
+            server2.get_client(None).unwrap().base_url(),
+            "http://default"
+        );
     }
 }

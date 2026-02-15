@@ -46,6 +46,10 @@ impl QBitClient {
         }
     }
 
+    pub fn base_url(&self) -> &str {
+        &self.base_url
+    }
+
     pub async fn login(&self) -> Result<()> {
         let base_url = self.base_url.trim_end_matches('/');
         let url = format!("{}/api/v2/auth/login", base_url);

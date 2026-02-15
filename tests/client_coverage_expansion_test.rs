@@ -406,4 +406,19 @@ async fn test_client_parameter_coverage() {
             .await
             .is_ok()
     );
+
+    // Success path for missing methods
+    Mock::given(method("POST"))
+        .and(path("/api/v2/torrents/renameFile"))
+        .respond_with(ResponseTemplate::new(200))
+        .mount(&mock_server)
+        .await;
+    assert!(client.rename_file("h", "old", "new").await.is_ok());
+
+    Mock::given(method("POST"))
+        .and(path("/api/v2/rss/removeItem"))
+        .respond_with(ResponseTemplate::new(200))
+        .mount(&mock_server)
+        .await;
+    assert!(client.remove_rss_item("path").await.is_ok());
 }

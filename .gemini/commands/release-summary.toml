@@ -1,16 +1,12 @@
 description = "Generates a GitHub release summary based on git logs."
 
-[parameters]
-range = { type = "string", description = "Commit range or tag (e.g., v0.1.0..v0.2.0).", sh = "TAGS=$(git tag --sort=-v:refname | head -n 2); LATEST=$(echo \"$TAGS\" | sed -n '1p'); PREVIOUS=$(echo \"$TAGS\" | sed -n '2p'); if [ -z \"$PREVIOUS\" ]; then echo \"HEAD\"; else echo \"$PREVIOUS..$LATEST\"; fi" }
-
-[prompt]
-content = """
+prompt = """
 You are an expert technical writer specializing in software release notes. Generate a clean, professional GitHub release summary.
 
-**Input Range**: {{range}}
+**Input Range**: !{ range="{{args}}"; if [ -z "$range" ]; then TAGS=$(git tag --sort=-v:refname | head -n 2); LATEST=$(echo "$TAGS" | sed -n '1p'); PREVIOUS=$(echo "$TAGS" | sed -n '2p'); if [ -z "$PREVIOUS" ]; then range="HEAD"; else range="$PREVIOUS..$LATEST"; fi; fi; echo "$range" }
 
 **Git Log Entries**:
-$(git log --pretty=format:"- %s" {{range}})
+!{ range="{{args}}"; if [ -z "$range" ]; then TAGS=$(git tag --sort=-v:refname | head -n 2); LATEST=$(echo "$TAGS" | sed -n '1p'); PREVIOUS=$(echo "$TAGS" | sed -n '2p'); if [ -z "$PREVIOUS" ]; then range="HEAD"; else range="$PREVIOUS..$LATEST"; fi; fi; git log --pretty=format:"- %s" "$range" }
 
 **Your Task**:
 1.  **Categorize** the above commits into these sections (using `###` for headers):
@@ -28,10 +24,11 @@ $(git log --pretty=format:"- %s" {{range}})
     -   Use triple backticks (```) for any code blocks.
     -   **Omit sections** that have no changes.
     -   Do not include commit hashes.
-4.  **Tone**: Direct, professional, and technical.
-5.  **Changelog Link**: At the bottom, add a link to the full changelog:
-    **Full Changelog**: https://github.com/nicholaswilde/qbittorrent-mcp-rs/compare/$(echo {{range}} | sed 's/\.\./.../g')
+  4.  **Tone**: Direct, professional, and technical.
+  5.  **Changelog Link**: At the bottom, add a link to the full changelog:
+      **Full Changelog**: https://github.com/nicholaswilde/adguardhome-mcp-rs/compare/!{ range="{{args}}"; if [ -z "$range" ]; then TAGS=$(git tag --sort=-v:refname | head -n 2); LATEST=$(echo "$TAGS" | sed -n '1p'); PREVIOUS=$(echo "$TAGS" | sed -n '2p'); if [ -z "$PREVIOUS" ]; then range="HEAD"; else range="$PREVIOUS..$LATEST"; fi; fi; echo "$range" | sed 's/\\.\\./.../g' }
 
 **Output**:
+
 (Generate the Markdown summary below)
 """

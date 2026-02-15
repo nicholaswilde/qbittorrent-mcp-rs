@@ -282,6 +282,47 @@ mod tests {
     }
 
     #[test]
+    fn test_cli_overrides_comprehensive() {
+        let args = vec![
+            "app".into(),
+            "--qbittorrent-host".into(),
+            "myhost".into(),
+            "--qbittorrent-port".into(),
+            "9999".into(),
+            "--qbittorrent-username".into(),
+            "myuser".into(),
+            "--qbittorrent-password".into(),
+            "mypass".into(),
+            "--server-mode".into(),
+            "http".into(),
+            "--log-level".into(),
+            "debug".into(),
+            "--log-dir".into(),
+            "/tmp/log".into(),
+            "--log-filename".into(),
+            "test.log".into(),
+            "--log-rotate".into(),
+            "never".into(),
+            "--http-auth-token".into(),
+            "token123".into(),
+            "--polling-interval-ms".into(),
+            "5000".into(),
+        ];
+        let config = AppConfig::load(None, args).unwrap();
+        assert_eq!(config.qbittorrent_host, "myhost");
+        assert_eq!(config.qbittorrent_port, Some(9999));
+        assert_eq!(config.qbittorrent_username, Some("myuser".into()));
+        assert_eq!(config.qbittorrent_password, Some("mypass".into()));
+        assert_eq!(config.server_mode, "http");
+        assert_eq!(config.log_level, "debug");
+        assert_eq!(config.log_dir, "/tmp/log");
+        assert_eq!(config.log_filename, "test.log");
+        assert_eq!(config.log_rotate, "never");
+        assert_eq!(config.http_auth_token, Some("token123".into()));
+        assert_eq!(config.polling_interval_ms, 5000);
+    }
+
+    #[test]
     fn test_get_instances_multiple() {
         let config = AppConfig {
             instances: Some(vec![
