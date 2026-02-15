@@ -15,24 +15,20 @@ A [Model Context Protocol (MCP) server](https://modelcontextprotocol.io/docs/get
     - Manage multiple qBittorrent instances simultaneously.
     - List all torrents with status, progress, and speed.
     - Add torrents via Magnet URIs or HTTP URLs.
-    - Pause, resume, delete, reannounce, and recheck torrents.
+    - **Unified Control**: Perform actions like pause, resume, reannounce, set category, and add tags via a single `manage_torrents` tool.
 - **:mag: Torrent Inspection**:
-    - List files contained within a torrent.
-    - Retrieve detailed properties (save path, creation date, seeds/peers, etc.).
-    - Inspect tracker status and messages.
+    - **Consolidated Inspection**: Retrieve properties, files, and trackers in a single call via `inspect_torrent`.
+    - Deep file listing and tracker status monitoring.
 - **:traffic_light: Global Control**:
-    - Monitor global download/upload speeds and limits.
-    - Set global download and upload speed limits.
-    - Toggle alternative speed limits.
-- **:label: Categories & Tags**:
-    - Organize torrents using categories and tags.
-    - Create categories with dedicated save paths.
+    - **System Health**: Monitor global speeds, data usage, and limits via a unified `get_system_info` tool.
+    - Ban peers and update application preferences.
+- **:label: Categories & Tags**: Organize torrents using categories and tags with simplified management tools.
 - **:mega: Proactive Notifications**: Receive real-time notifications when downloads finish (powered by the Sync API).
 - **:broom: Maintenance Macros**:
     - `cleanup_completed`: Auto-remove torrents based on seeding ratio or age.
     - `mass_rename`: Bulk rename files within torrents using Regex.
     - `find_duplicates`: Identify redundant downloads by name.
-- **:bulb: Troubleshooting Prompts**: Guided workflows to fix stalled or slow torrents.
+- **:bulb: Troubleshooting Prompts**: Consolidated `troubleshoot_torrent` prompt for guided workflows.
 - **:sleeping: Lazy Mode**: Reduce token usage by hiding advanced tools until explicitly requested.
 - **:gear: Configuration**: TOML, YAML, JSON, or Environment Variables.
 - **:rocket: Transports**: Stdio (default) and HTTP (SSE with optional token auth).
@@ -51,20 +47,13 @@ The server exposes the following tools to the LLM, categorized by functionality:
 - `get_search_plugins`: List installed search plugins.
 
 ### :card_file_box: Torrent Management
-- `list_torrents`: List all torrents with their status and progress. Supports filtering (state, category, tag) and sorting.
+- `list_torrents`: List all torrents with their status and progress. Supports filtering, sorting, and optional inclusion of `properties` or `files`.
+- `manage_torrents`: Unified tool for multiple torrent actions: `pause`, `resume`, `reannounce`, `recheck`, `set_category`, `add_tags`, `remove_tags`, `set_share_limits`, `set_speed_limits`, `toggle_sequential`, `toggle_first_last_prio`, `set_force_start`, `set_super_seeding`.
 - `add_torrent`: Add a new torrent via Magnet URI or HTTP URL.
-- `pause_torrent`: Pause one or more torrents (use `|` to separate multiple hashes).
-- `resume_torrent`: Resume one or more torrents (use `|` to separate multiple hashes).
 - `delete_torrent`: Delete one or more torrents, optionally deleting downloaded files.
-- `reannounce_torrent`: Reannounce one or more torrents to trackers.
-- `recheck_torrent`: Recheck (verify) one or more torrents.
 - `cleanup_completed`: Remove completed torrents based on minimum ratio or maximum age (days).
 - `mass_rename`: Rename multiple files in a torrent using a Regex pattern and replacement string.
 - `find_duplicates`: Group and list torrents with identical names.
-- `toggle_sequential_download`: Toggle sequential download for torrents.
-- `toggle_first_last_piece_priority`: Toggle first/last piece priority for torrents.
-- `set_force_start`: Set force start for torrents.
-- `set_super_seeding`: Set super seeding for torrents.
 - `add_trackers`: Add trackers to torrents.
 - `edit_tracker`: Edit a tracker URL for a torrent.
 - `remove_trackers`: Remove trackers from torrents.
@@ -72,27 +61,15 @@ The server exposes the following tools to the LLM, categorized by functionality:
 - `set_file_priority`: Set priority for files in a torrent.
 
 ### :mag: Torrent Inspection
+- `inspect_torrent`: Comprehensive inspection of a torrent (properties, files, and trackers in one call).
 - `get_torrent_files`: List all files inside a specific torrent.
-- `get_torrent_properties`: Get detailed technical properties of a torrent (save path, seeds, peers, etc.).
 
 ### :traffic_light: Global Control
-- `get_global_transfer_info`: Get global download/upload speeds, data usage, and limits.
-- `set_global_transfer_limits`: Set global download and/or upload speed limits (in bytes per second).
-- `toggle_alternative_speed_limits`: Toggle alternative speed limits mode.
-- `get_speed_limits_mode`: Get the current state of alternative speed limits (0: disabled, 1: enabled).
 - `ban_peers`: Ban a list of peers (host:port, pipe-separated).
-- `get_app_preferences`: Retrieve all application preferences (full configuration).
 - `set_app_preferences`: Update application preferences using a JSON string.
 
 ### :label: Categories & Tags
-- `create_category`: Create a new category with a save path.
-- `set_torrent_category`: Assign a category to one or more torrents.
 - `get_categories`: List all available categories.
-- `remove_categories`: Remove one or more categories.
-- `add_torrent_tags`: Add tags to one or more torrents.
-- `remove_tags`: Remove tags from torrents.
-- `create_tags`: Create one or more tags.
-- `delete_tags`: Delete one or more tags.
 
 ### :wireless: RSS Management
 - `add_rss_feed`: Add a new RSS feed.
@@ -109,8 +86,7 @@ The server exposes the following tools to the LLM, categorized by functionality:
 - `get_peer_log`: Retrieve the peer connection log.
 
 ### :desktop_computer: System Tools
-- `get_app_version`: Get qBittorrent application version.
-- `get_build_info`: Get qBittorrent build information (Qt, Libtorrent, etc.).
+- `get_system_info`: Comprehensive system information (transfer speeds, preferences, version, and build info in one call).
 - `shutdown_app`: Shutdown the qBittorrent application.
 - `show_all_tools`: Enable all available tools when running in `--lazy` mode.
 
