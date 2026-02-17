@@ -7,7 +7,7 @@ Currently, the binary does not respond to version queries. This track will imple
 
 ## Functional Requirements
 - **Flag Implementation:** Support both `--version` and the short `-V` flag.
-- **Output Format:** The output must follow the format `qbittorrent-mcp-rs <VERSION>`, where `<VERSION>` is dynamically sourced from the `Cargo.toml` file.
+- **Output Format:** The output must follow the format `qbittorrent-mcp-rs <VERSION>`, where `<VERSION>` is pulled dynamically from `Cargo.toml` using `env!("CARGO_PKG_VERSION")`.
 - **Execution Flow:** Upon detecting the version flag, the application must print the information to `stdout` and terminate immediately with exit code `0`, bypassing configuration loading and server startup.
 
 ## Non-Functional Requirements

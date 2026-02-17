@@ -1,0 +1,8 @@
+{
+  "track_id": "version_flag_20260217",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-02-17T12:00:00Z",
+  "updated_at": "2026-02-17T12:00:00Z",
+  "description": "Create a new track that add a `--version` and `-V` command line argument to print the version. Use env!(\"CARGO_PKG_VERSION\") to pull the version from Cargo.toml."
+}
