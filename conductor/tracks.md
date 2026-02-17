@@ -11,6 +11,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 *Link: [./tracks/gemini_extension_20260212/](./tracks/gemini_extension_20260212/)*
 - [ ] **Track: HTTP Mode Integration Testing**
 *Link: [./tracks/http_mode_testing_20260213/](./tracks/http_mode_testing_20260213/)*
+- [ ] **Track: Version Flag Support**
+*Link: [./tracks/version_flag_20260217/](./tracks/version_flag_20260217/)*
 
 ## Archived Tracks
 - [MCP Best Practices & Token Optimization](./archive/mcp_optimization_20260215/plan.md)
