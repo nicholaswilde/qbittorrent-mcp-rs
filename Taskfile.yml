@@ -199,6 +199,21 @@ tasks:
     cmds:
       - docker buildx build --load -t qbittorrent-mcp-rs .
 
+  compose:up:
+    desc: Start the project using Docker Compose
+    cmds:
+      - docker compose up -d
+
+  compose:down:
+    desc: Stop the project using Docker Compose
+    cmds:
+      - docker compose down
+
+  compose:logs:
+    desc: View Docker Compose logs
+    cmds:
+      - docker compose logs -f
+
   clean:
     desc: Clean build artifacts
     cmds:

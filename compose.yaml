@@ -1,0 +1,46 @@
+services:
+  qbittorrent-mcp:
+    image: ghcr.io/nicholaswilde/qbittorrent-mcp-rs:latest
+    container_name: qbittorrent-mcp
+    restart: unless-stopped
+    environment:
+      # --- Required Variables ---
+      # Host of the qBittorrent Web UI (IP, hostname, or full URL)
+      - QBITTORRENT_HOST=http://192.168.1.100
+      # qBittorrent Web UI Username
+      - QBITTORRENT_USERNAME=admin
+      # qBittorrent Web UI Password
+      - QBITTORRENT_PASSWORD=adminadmin
+
+      # --- Optional Variables ---
+      # Port of the qBittorrent Web UI (defaults to 80 for http, 443 for https)
+      # - QBITTORRENT_PORT=8080
+      # Server mode: "stdio" or "http". Defaults to "stdio".
+      # "http" starts an SSE server on port 3000.
+      # - QBITTORRENT_SERVER_MODE=http
+      # Enable lazy mode (show fewer tools initially to save tokens). Defaults to false.
+      # - QBITTORRENT_LAZY_MODE=false
+      # Disable SSL certificate verification (insecure). Defaults to false.
+      # - QBITTORRENT_NO_VERIFY_SSL=false
+      # Log level (error, warn, info, debug, trace). Default is "info".
+      # - QBITTORRENT_LOG_LEVEL=info
+      # Enable logging to a file. Defaults to false.
+      # - QBITTORRENT_LOG_FILE_ENABLE=false
+      # Log file directory. Default is ".".
+      # - QBITTORRENT_LOG_DIR=/logs
+      # Log filename prefix. Default is "qbittorrent-mcp-rs.log".
+      # - QBITTORRENT_LOG_FILENAME=qbittorrent-mcp-rs.log
+      # Log rotation strategy (daily, hourly, never). Default is "daily".
+      # - QBITTORRENT_LOG_ROTATE=daily
+      # Authentication token for HTTP server mode.
+      # - QBITTORRENT_HTTP_AUTH_TOKEN=my-secret-token
+      # Polling interval for notifications in milliseconds. Default is 2000.
+      # - QBITTORRENT_POLLING_INTERVAL_MS=2000
+    
+    # Expose port 3000 if using QBITTORRENT_SERVER_MODE=http
+    # ports:
+    #   - "3000:3000"
+
+    # Mount a directory for logs if QBITTORRENT_LOG_FILE_ENABLE is true
+    # volumes:
+    #   - ./logs:/logs
