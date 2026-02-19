@@ -26,7 +26,7 @@ You are an expert technical writer specializing in software release notes. Gener
     -   Do not include commit hashes.
   4.  **Tone**: Direct, professional, and technical.
   5.  **Changelog Link**: At the bottom, add a link to the full changelog:
-      **Full Changelog**: https://github.com/nicholaswilde/adguardhome-mcp-rs/compare/!{ range="{{args}}"; if [ -z "$range" ]; then TAGS=$(git tag --sort=-v:refname | head -n 2); LATEST=$(echo "$TAGS" | sed -n '1p'); PREVIOUS=$(echo "$TAGS" | sed -n '2p'); if [ -z "$PREVIOUS" ]; then range="HEAD"; else range="$PREVIOUS..$LATEST"; fi; fi; echo "$range" | sed 's/\\.\\./.../g' }
+      **Full Changelog**: https://github.com/nicholaswilde/qbittorrent-mcp-rs/compare/!{ range="{{args}}"; if [ -z "$range" ]; then TAGS=$(git tag --sort=-v:refname | head -n 2); LATEST=$(echo "$TAGS" | sed -n '1p'); PREVIOUS=$(echo "$TAGS" | sed -n '2p'); if [ -z "$PREVIOUS" ]; then range="HEAD"; else range="$PREVIOUS..$LATEST"; fi; fi; echo "$range" | sed 's/\\.\\./.../g' }
 
 **Output**:
 

@@ -1,0 +1,33 @@
+description = "Automates the versioning, tagging, and deployment process for the project."
+
+prompt = """
+You are a release automation assistant. Your task is to perform a project release.
+
+Follow these steps exactly:
+
+1.  **Extract Current Version**: Read `Cargo.toml` and find the `version` field.
+2.  **Calculate New Version**: Increment the patch version (e.g., `0.1.15` -> `0.1.16`).
+3.  **Update Cargo.toml**: Update the `version` field in `Cargo.toml` with the new version.
+4.  **Update Cargo.lock**: Run `cargo check` to update `Cargo.lock`.
+5.  **Update README.md**: Update the version string in the `[!WARNING]` section (e.g., `(v0.1.15)` -> `(v0.1.16)`).
+6.  **Git Operations**:
+    -   Perform `git pull --rebase` to ensure the local branch is up-to-date.
+    -   Stage `Cargo.toml`, `Cargo.lock`, and `README.md`.
+    -   Commit with message `chore: Bump version to <new_version>`.
+    -   Create an annotated tag `v<new_version>` with message `<new_version>`.
+    -   Push atomically: `git push --atomic origin main v<new_version>`.
+
+**Important**:
+- Use `git commit -m` and `git tag -a -m` to avoid interactive editors.
+- If any step fails, stop and report the error.
+- For `README.md` update, you can use `sed -i "s/v$VERSION/v$NEW_VERSION/g" README.md`.
+
+**Context Information**:
+- **Current Version**: !{ grep '^version =' Cargo.toml | sed -E 's/version = "(.*)"/\\1/' }
+- **New Calculated Version**: !{ VERSION=$(grep '^version =' Cargo.toml | sed -E 's/version = "(.*)"/\\1/'); IFS='.' read -r major minor patch <<< "$VERSION"; NEW_PATCH=$((patch + 1)); echo "$major.$minor.$NEW_PATCH" }
+
+**Files Changed (Current State)**:
+!{ git status --porcelain }
+
+Please execute the release now.
+"""

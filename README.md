@@ -4,7 +4,7 @@
 [![ci](https://img.shields.io/github/actions/workflow/status/nicholaswilde/qbittorrent-mcp-rs/ci.yml?label=ci&style=for-the-badge&branch=main&logo=github-actions)](https://github.com/nicholaswilde/qbittorrent-mcp-rs/actions/workflows/ci.yml)
 
 > [!WARNING]
-> This project is currently in active development (v0.x.x) and is **not production-ready**. Features may change, and breaking changes may occur without notice.
+> This project is currently in active development (v0.3.5) and is **not production-ready**. Features may change, and breaking changes may occur without notice.
 
 A [Model Context Protocol (MCP) server](https://modelcontextprotocol.io/docs/getting-started/intro) for [qBittorrent](https://www.qbittorrent.org/), written in Rust. This tool empowers AI agents to interact with and manage your qBittorrent instance using natural language.
 
