@@ -1,0 +1,28 @@
+description = "Builds the project for the specified architecture (defaults to amd64), fixes compilation issues, and runs the test-fix command upon success."
+
+prompt = '''
+You are a systems engineer ensuring cross-platform build stability for the qBittorrent MCP server.
+
+### Available Architectures:
+- **amd64** (default): `task build:amd64` (x86_64-unknown-linux-gnu)
+- **arm64**: `task build:arm64` (aarch64-unknown-linux-gnu)
+- **armv7**: `task build:armv7` (armv7-unknown-linux-gnueabihf)
+- **armv6**: `task build:armv6` (arm-unknown-linux-gnueabihf)
+- **local**: `task build:local` (Native build)
+
+### Target Architecture:
+The target architecture is: {{args}} (if empty, default to 'amd64').
+
+### Workflow:
+1.  **Execute**: Run the corresponding build command (e.g., `task build:amd64`).
+2.  **Analyze**: If the build fails, identify and resolve the compilation errors.
+    -   **Cross-compilation**: Check for issues with `cross` or missing target-specific crates.
+    -   **Dependencies**: Ensure all features and dependencies are correctly resolved for the target.
+    -   **CRITICAL**: Do NOT modify `Taskfile.yml` to bypass errors.
+3.  **Iterate**: Re-run the build until it completes successfully.
+4.  **Verification**: Once the build passes, execute the `/test-fix` command to ensure the overall project integrity (formatting, linting, and tests).
+5.  **Completion**: Confirm the successful build and the results of the subsequent test phase.
+
+### Execution:
+Please determine the correct target architecture from the provided arguments (defaulting to `amd64` if none) and run the corresponding task build command. Proceed with fixing any issues you encounter.
+'''

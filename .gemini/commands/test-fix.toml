@@ -1,0 +1,24 @@
+description = "Runs the full CI test suite (fmt, lint, clippy, cargo tests) and autonomously fixes failures."
+
+prompt = '''
+You are a senior Rust engineer tasked with ensuring the qBittorrent MCP project passes its CI checks.
+
+### Workflow:
+1.  **Execute**: Run `task test:ci` (fmt:check, lint, cargo test --profile ci, and clippy).
+2.  **Analyze**: If any step fails, capture the output and identify the failure type:
+    -   **Formatting**: `cargo fmt -- --check` failure.
+    -   **Linting**: Clippy warnings/errors from `task lint` or `task clippy`.
+    -   **Unit Tests**: Failures in `cargo test --profile ci`.
+    -   **Integration Tests**: Failures in `tests/` directory (run with `cargo test`).
+3.  **Fix**: Apply surgical fixes to resolve the issues:
+    -   **Formatting**: Use `task fmt` to fix automatically.
+    -   **Lints**: Address Clippy suggestions directly in the code (e.g., using `allow`, `derive`, or code refactor).
+    -   **Tests**: Fix logic errors, handle panics, or update mocks if necessary.
+    -   **CRITICAL**: Do NOT modify `Taskfile.yml` to bypass checks.
+4.  **Verify**: Re-run `task test:ci` after fixes to ensure all checks pass.
+5.  **Docker (Optional)**: If changes might affect Docker integration, run `task test:docker`.
+6.  **Report**: provide a concise summary of all fixes applied.
+
+### Execution:
+Please run `task test:ci` now and proceed with fixing any issues you encounter.
+'''
