@@ -22,7 +22,7 @@ tracing-appender = "0.2.4"
 tracing-log = "0.2.0"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 url = "2.5.8"
-regex = "1.11.1"
+regex = "1.12.3"
 uuid = { version = "1.19.0", features = ["v4", "fast-rng"] }
 
 [dev-dependencies]
