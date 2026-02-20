@@ -267,6 +267,9 @@ impl McpServer {
             "resources/list" => Ok(json!({
                 "resources": self.get_resource_definitions()
             })),
+            "resources/templates/list" => Ok(json!({
+                "resourceTemplates": self.get_resource_template_definitions()
+            })),
             "resources/read" => {
                 if let Some(params) = req.params {
                     let uri = params.get("uri").and_then(|n| n.as_str()).unwrap_or("");
@@ -303,27 +306,30 @@ impl McpServer {
                 "mimeType": "application/json"
             }));
         }
-
-        // Templates
-        res.push(json!({
-            "uriTemplate": "qbittorrent://{instance}/torrent/{hash}/properties",
-            "name": "Torrent Properties",
-            "description": "Detailed properties and metadata for a specific torrent",
-            "mimeType": "application/json"
-        }));
-        res.push(json!({
-            "uriTemplate": "qbittorrent://{instance}/torrent/{hash}/files",
-            "name": "Torrent Files",
-            "description": "List of files and their progress within a specific torrent",
-            "mimeType": "application/json"
-        }));
-        res.push(json!({
-            "uriTemplate": "qbittorrent://{instance}/torrent/{hash}/trackers",
-            "name": "Torrent Trackers",
-            "description": "Current trackers and their status for a specific torrent",
-            "mimeType": "application/json"
-        }));
         res
+    }
+
+    fn get_resource_template_definitions(&self) -> Vec<Value> {
+        vec![
+            json!({
+                "uriTemplate": "qbittorrent://{instance}/torrent/{hash}/properties",
+                "name": "Torrent Properties",
+                "description": "Detailed properties and metadata for a specific torrent",
+                "mimeType": "application/json"
+            }),
+            json!({
+                "uriTemplate": "qbittorrent://{instance}/torrent/{hash}/files",
+                "name": "Torrent Files",
+                "description": "List of files and their progress within a specific torrent",
+                "mimeType": "application/json"
+            }),
+            json!({
+                "uriTemplate": "qbittorrent://{instance}/torrent/{hash}/trackers",
+                "name": "Torrent Trackers",
+                "description": "Current trackers and their status for a specific torrent",
+                "mimeType": "application/json"
+            }),
+        ]
     }
 
     async fn handle_resource_read(&self, uri: &str) -> Result<Value> {

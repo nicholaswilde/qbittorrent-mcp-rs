@@ -161,6 +161,24 @@ async fn test_mcp_resource_list() {
 }
 
 #[tokio::test]
+async fn test_mcp_resource_templates_list() {
+    let clients = HashMap::<String, QBitClient>::new();
+    let server = McpServer::new(clients, false);
+    let res = server
+        .handle_request(JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            method: "resources/templates/list".to_string(),
+            params: None,
+            id: Some(json!(7)),
+        })
+        .await
+        .unwrap();
+    let templates = res.get("resourceTemplates").unwrap().as_array().unwrap();
+    assert_eq!(templates.len(), 3);
+    assert!(templates[0].get("uriTemplate").is_some());
+}
+
+#[tokio::test]
 async fn test_mcp_errors() {
     let clients = HashMap::new();
     let server = McpServer::new(clients, false);
