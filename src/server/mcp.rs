@@ -1902,20 +1902,13 @@ impl McpServer {
                     Err(e) => {
                         if self.is_running() {
                             if *was_connected.get(name).unwrap_or(&false) {
-                                error!(
-                                    "Lost connection to qBittorrent instance '{}': {}",
-                                    name, e
-                                );
+                                error!("Lost connection to qBittorrent instance '{}': {}", name, e);
                                 was_connected.insert(name.clone(), false);
                                 last_rids.insert(name.clone(), 0);
                             }
                             if client.has_credentials() {
-                                match client.login().await {
-                                    Ok(()) => info!(
-                                        "Re-authenticated to qBittorrent instance '{}'",
-                                        name
-                                    ),
-                                    Err(_) => {}
+                                if let Ok(()) = client.login().await {
+                                    info!("Re-authenticated to qBittorrent instance '{}'", name)
                                 }
                             }
                         }
