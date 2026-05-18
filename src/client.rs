@@ -50,6 +50,10 @@ impl QBitClient {
         &self.base_url
     }
 
+    pub fn has_credentials(&self) -> bool {
+        self.username.is_some()
+    }
+
     pub async fn login(&self) -> Result<()> {
         let base_url = self.base_url.trim_end_matches('/');
         let url = format!("{}/api/v2/auth/login", base_url);

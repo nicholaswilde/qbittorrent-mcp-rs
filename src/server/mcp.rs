@@ -1820,10 +1820,12 @@ impl McpServer {
         let mut last_rids: HashMap<String, i64> = HashMap::new();
         let mut notified_finished: HashMap<String, std::collections::HashSet<String>> =
             HashMap::new();
+        let mut was_connected: HashMap<String, bool> = HashMap::new();
 
         for name in self.clients.keys() {
             last_rids.insert(name.clone(), 0);
             notified_finished.insert(name.clone(), std::collections::HashSet::new());
+            was_connected.insert(name.clone(), false);
         }
 
         loop {
@@ -1839,6 +1841,10 @@ impl McpServer {
                 let rid = *last_rids.get(name).unwrap_or(&0);
                 match client.get_main_data(rid).await {
                     Ok(data) => {
+                        if !*was_connected.get(name).unwrap_or(&false) {
+                            info!("Connected to qBittorrent instance '{}'", name);
+                            was_connected.insert(name.clone(), true);
+                        }
                         last_rids.insert(name.clone(), data.rid);
 
                         // Track finished torrents to notify only once
@@ -1895,7 +1901,23 @@ impl McpServer {
                     }
                     Err(e) => {
                         if self.is_running() {
-                            error!("Polling error for instance {}: {}", name, e);
+                            if *was_connected.get(name).unwrap_or(&false) {
+                                error!(
+                                    "Lost connection to qBittorrent instance '{}': {}",
+                                    name, e
+                                );
+                                was_connected.insert(name.clone(), false);
+                                last_rids.insert(name.clone(), 0);
+                            }
+                            if client.has_credentials() {
+                                match client.login().await {
+                                    Ok(()) => info!(
+                                        "Re-authenticated to qBittorrent instance '{}'",
+                                        name
+                                    ),
+                                    Err(_) => {}
+                                }
+                            }
                         }
                     }
                 }
