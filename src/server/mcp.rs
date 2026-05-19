@@ -1906,10 +1906,8 @@ impl McpServer {
                                 was_connected.insert(name.clone(), false);
                                 last_rids.insert(name.clone(), 0);
                             }
-                            if client.has_credentials() {
-                                if let Ok(()) = client.login().await {
-                                    info!("Re-authenticated to qBittorrent instance '{}'", name)
-                                }
+                            if client.has_credentials() && client.login().await.is_ok() {
+                                info!("Re-authenticated to qBittorrent instance '{}'", name)
                             }
                         }
                     }
