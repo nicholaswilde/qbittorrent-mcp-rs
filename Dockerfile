@@ -1,4 +1,4 @@
-FROM rust:latest AS chef
+FROM rust:bookworm AS chef
 # We only pay the installation cost once,
 # it will be cached from the second build onwards
 RUN cargo install cargo-chef
