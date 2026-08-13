@@ -683,19 +683,25 @@ impl McpServer {
         vec![
             json!({
                 "name": "list_torrents",
-                "description": "List all torrents with optional filtering and sorting",
+                "description": "List torrents with optional filtering, sorting, field selection, and search. Use 'summary' for a compact table, 'fields' to select columns, 'search' to filter by name, 'group_by_state'/'group_by_category' for grouped breakdowns, or 'stats_only' for counts and totals without listing individual torrents.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "filter": { "type": "string", "description": "Filter by status (all, downloading, completed, paused, active, inactive, resumed, stalled, stalled_uploading, stalled_downloading, errored)" },
                         "category": { "type": "string", "description": "Filter by category" },
                         "tag": { "type": "string", "description": "Filter by tag" },
+                        "search": { "type": "string", "description": "Case-insensitive substring search on torrent name" },
                         "sort": { "type": "string", "description": "Sort by column name (e.g., name, size, progress, added_on, dlspeed, upspeed, ratio, eta, state, category, tags)" },
                         "reverse": { "type": "boolean", "description": "True to reverse sort order" },
                         "limit": { "type": "integer", "description": "Maximum number of torrents to return" },
                         "offset": { "type": "integer", "description": "Number of torrents to skip" },
-                        "include_properties": { "type": "boolean", "description": "Include detailed properties for each torrent" },
-                        "include_files": { "type": "boolean", "description": "Include file list for each torrent" }
+                        "fields": { "type": "array", "items": { "type": "string" }, "description": "List of fields to include in output (e.g., ['name', 'progress', 'state', 'hash']). Omit for all fields. Available: hash, name, size, progress, dlspeed, upspeed, priority, num_seeds, num_leechs, num_incomplete, num_complete, ratio, eta, state, added_on, completion_on, seq_dl, f_l_piece_prio, category, tags, super_seeding, force_start" },
+                        "summary": { "type": "boolean", "description": "Return a compact one-line-per-torrent table (name, progress, state, size, category, hash) instead of full JSON" },
+                        "group_by_state": { "type": "boolean", "description": "Return torrents grouped by state with counts, plus a compact listing under each state" },
+                        "group_by_category": { "type": "boolean", "description": "Return torrents grouped by category with counts, plus a compact listing under each category" },
+                        "stats_only": { "type": "boolean", "description": "Return only aggregate stats (counts by state/category, total size, speed totals) with no individual torrent listing — most token-efficient view" },
+                        "include_properties": { "type": "boolean", "description": "Include detailed properties for each torrent (ignored when summary=true)" },
+                        "include_files": { "type": "boolean", "description": "Include file list for each torrent (ignored when summary=true)" }
                     },
                     "required": []
                 }
@@ -1171,6 +1177,15 @@ impl McpServer {
         let reverse = args.get("reverse").and_then(|v| v.as_bool());
         let limit = args.get("limit").and_then(|v| v.as_i64());
         let offset = args.get("offset").and_then(|v| v.as_i64());
+        let search = args.get("search").and_then(|v| v.as_str());
+        let summary = args
+            .get("summary")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let fields: Option<Vec<&str>> = args.get("fields").and_then(|v| {
+            v.as_array()
+                .map(|arr| arr.iter().filter_map(|f| f.as_str()).collect())
+        });
 
         let include_properties = args
             .get("include_properties")
@@ -1181,10 +1196,228 @@ impl McpServer {
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
-        let torrents = client
+        let mut torrents = client
             .get_torrent_list(filter, category, tag, sort, reverse, limit, offset)
             .await?;
 
+        // Apply name search filter
+        if let Some(search_term) = search {
+            let search_lower = search_term.to_lowercase();
+            torrents.retain(|t| t.name.to_lowercase().contains(&search_lower));
+        }
+
+        let total = torrents.len();
+        let group_by_state = args
+            .get("group_by_state")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let group_by_category = args
+            .get("group_by_category")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let stats_only = args
+            .get("stats_only")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        // Stats only mode: aggregate counts, no individual torrents
+        if stats_only {
+            let mut state_counts: std::collections::BTreeMap<String, usize> =
+                std::collections::BTreeMap::new();
+            let mut cat_counts: std::collections::BTreeMap<String, usize> =
+                std::collections::BTreeMap::new();
+            let mut total_size: i64 = 0;
+            let mut total_dl_speed: i64 = 0;
+            let mut total_ul_speed: i64 = 0;
+
+            for t in &torrents {
+                *state_counts.entry(t.state.clone()).or_default() += 1;
+                let cat_name = if t.category.is_empty() {
+                    "(none)".to_string()
+                } else {
+                    t.category.clone()
+                };
+                *cat_counts.entry(cat_name).or_default() += 1;
+                total_size += t.size_bytes;
+                total_dl_speed += t.dlspeed;
+                total_ul_speed += t.upspeed;
+            }
+
+            let mut lines = Vec::new();
+            lines.push(format!(
+                "=== {} torrents | {} total | DL {} /s | UL {} /s ===",
+                total,
+                Self::format_size(total_size),
+                Self::format_size(total_dl_speed),
+                Self::format_size(total_ul_speed),
+            ));
+            lines.push(String::new());
+            lines.push("By state:".to_string());
+            for (state, count) in &state_counts {
+                lines.push(format!("  {:<20} {:>4}", state, count));
+            }
+            lines.push(String::new());
+            lines.push("By category:".to_string());
+            for (cat, count) in &cat_counts {
+                lines.push(format!("  {:<20} {:>4}", cat, count));
+            }
+
+            let text = lines.join("\n");
+            return Ok(json!({ "content": [{ "type": "text", "text": text }] }));
+        }
+
+        // Group by state mode
+        if group_by_state {
+            let mut groups: std::collections::BTreeMap<String, Vec<&crate::models::Torrent>> =
+                std::collections::BTreeMap::new();
+            for t in &torrents {
+                groups.entry(t.state.clone()).or_default().push(t);
+            }
+
+            let mut lines = Vec::new();
+            lines.push(format!(
+                "Total: {} torrents across {} states",
+                total,
+                groups.len()
+            ));
+            lines.push(String::new());
+
+            // State summary counts
+            for (state, group) in &groups {
+                lines.push(format!("  {:<20} {:>4}", state, group.len()));
+            }
+            lines.push(String::new());
+
+            // Detailed listing per state
+            for (state, group) in &groups {
+                lines.push(format!("── {} ({}) ──", state, group.len()));
+                for t in group {
+                    let size = Self::format_size(t.size_bytes);
+                    lines.push(format!(
+                        "  {:<58} {:>6.1}% {:>10}  {}",
+                        Self::truncate_str(&t.name, 58),
+                        t.progress * 100.0,
+                        size,
+                        &t.hash[..12],
+                    ));
+                }
+                lines.push(String::new());
+            }
+
+            let text = lines.join("\n");
+            return Ok(json!({ "content": [{ "type": "text", "text": text }] }));
+        }
+
+        // Group by category mode
+        if group_by_category {
+            let mut groups: std::collections::BTreeMap<String, Vec<&crate::models::Torrent>> =
+                std::collections::BTreeMap::new();
+            for t in &torrents {
+                let cat_name = if t.category.is_empty() {
+                    "(none)".to_string()
+                } else {
+                    t.category.clone()
+                };
+                groups.entry(cat_name).or_default().push(t);
+            }
+
+            let mut lines = Vec::new();
+            lines.push(format!(
+                "Total: {} torrents across {} categories",
+                total,
+                groups.len()
+            ));
+            lines.push(String::new());
+
+            // Category summary counts
+            for (cat, group) in &groups {
+                let cat_size: i64 = group.iter().map(|t| t.size_bytes).sum();
+                lines.push(format!(
+                    "  {:<20} {:>4}  ({})",
+                    cat,
+                    group.len(),
+                    Self::format_size(cat_size)
+                ));
+            }
+            lines.push(String::new());
+
+            // Detailed listing per category
+            for (cat, group) in &groups {
+                lines.push(format!("── {} ({}) ──", cat, group.len()));
+                for t in group {
+                    let size = Self::format_size(t.size_bytes);
+                    lines.push(format!(
+                        "  {:<58} {:>6.1}% {:>10}  {}",
+                        Self::truncate_str(&t.name, 58),
+                        t.progress * 100.0,
+                        size,
+                        &t.hash[..12],
+                    ));
+                }
+                lines.push(String::new());
+            }
+
+            let text = lines.join("\n");
+            return Ok(json!({ "content": [{ "type": "text", "text": text }] }));
+        }
+
+        // Summary mode: compact one-line-per-torrent table
+        if summary {
+            let mut lines = Vec::with_capacity(total + 2);
+            lines.push(format!("Found {} torrents", total));
+            lines.push(format!(
+                "{:<60} {:>7} {:<20} {:>10} {:<15} {}",
+                "Name", "Prog %", "State", "Size", "Category", "Hash"
+            ));
+            lines.push("-".repeat(160));
+            for t in &torrents {
+                let size = Self::format_size(t.size_bytes);
+                lines.push(format!(
+                    "{:<60} {:>6.1}% {:<20} {:>10} {:<15} {}",
+                    Self::truncate_str(&t.name, 60),
+                    t.progress * 100.0,
+                    t.state,
+                    size,
+                    Self::truncate_str(&t.category, 15),
+                    t.hash,
+                ));
+            }
+            let text = lines.join("\n");
+            return Ok(json!({ "content": [{ "type": "text", "text": text }] }));
+        }
+
+        // Field selection: filter JSON keys
+        if let Some(ref selected_fields) = fields {
+            let filtered: Vec<Value> = torrents
+                .iter()
+                .map(|t| {
+                    let full = json!(t);
+                    let obj = match full.as_object() {
+                        Some(o) => o,
+                        None => return Value::Object(serde_json::Map::new()),
+                    };
+                    let mut picked = serde_json::Map::new();
+                    for &field in selected_fields {
+                        // Map user-friendly names to serde keys
+                        let key = match field {
+                            "size" => "size_bytes",
+                            other => other,
+                        };
+                        if let Some(val) = obj.get(key) {
+                            picked.insert(field.to_string(), val.clone());
+                        }
+                    }
+                    Value::Object(picked)
+                })
+                .collect();
+            let text = serde_json::to_string_pretty(&json!({
+                "total": total,
+                "torrents": filtered,
+            }))?;
+            return Ok(json!({ "content": [{ "type": "text", "text": text }] }));
+        }
+
+        // Full output (with optional properties/files)
         if !include_properties && !include_files {
             let text = serde_json::to_string_pretty(&torrents)?;
             return Ok(json!({ "content": [{ "type": "text", "text": text }] }));
@@ -1204,6 +1437,34 @@ impl McpServer {
 
         let text = serde_json::to_string_pretty(&detailed_torrents)?;
         Ok(json!({ "content": [{ "type": "text", "text": text }] }))
+    }
+
+    fn format_size(bytes: i64) -> String {
+        const KB: f64 = 1024.0;
+        const MB: f64 = KB * 1024.0;
+        const GB: f64 = MB * 1024.0;
+        const TB: f64 = GB * 1024.0;
+        let b = bytes as f64;
+        if b >= TB {
+            format!("{:.1} TB", b / TB)
+        } else if b >= GB {
+            format!("{:.1} GB", b / GB)
+        } else if b >= MB {
+            format!("{:.1} MB", b / MB)
+        } else if b >= KB {
+            format!("{:.1} KB", b / KB)
+        } else {
+            format!("{} B", bytes)
+        }
+    }
+
+    fn truncate_str(s: &str, max: usize) -> String {
+        if s.chars().count() <= max {
+            s.to_string()
+        } else {
+            let truncated: String = s.chars().take(max.saturating_sub(3)).collect();
+            format!("{}...", truncated)
+        }
     }
 
     async fn handle_manage_torrents(&self, client: &QBitClient, args: &Value) -> Result<Value> {
