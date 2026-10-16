@@ -622,25 +622,10 @@ impl McpServer {
     fn get_tool_definitions(&self) -> Vec<Value> {
         let state = self.state.lock().unwrap();
         if state.lazy_mode && !state.tools_loaded {
+            let mut torrent_tools = self.get_torrent_tools();
+            let list_torrents_tool = torrent_tools.remove(0);
             return vec![
-                json!({
-                    "name": "list_torrents",
-                    "description": "List all torrents with optional filtering and sorting",
-                    "inputSchema": {
-                        "type": "object",
-                        "properties": {
-                            "instance": { "type": "string", "description": "Optional: Name of the qBittorrent instance" },
-                            "filter": { "type": "string", "description": "Filter by status (all, downloading, completed, paused, active, inactive, resumed, stalled, stalled_uploading, stalled_downloading, errored)" },
-                            "category": { "type": "string", "description": "Filter by category" },
-                            "tag": { "type": "string", "description": "Filter by tag" },
-                            "sort": { "type": "string", "description": "Sort by column name" },
-                            "reverse": { "type": "boolean", "description": "True to reverse sort order" },
-                            "limit": { "type": "integer", "description": "Maximum number of torrents to return" },
-                            "offset": { "type": "integer", "description": "Number of torrents to skip" }
-                        },
-                        "required": []
-                    }
-                }),
+                list_torrents_tool,
                 json!({
                     "name": "show_all_tools",
                     "description": "Enable all available tools",
@@ -687,6 +672,7 @@ impl McpServer {
                 "inputSchema": {
                     "type": "object",
                     "properties": {
+                        "instance": { "type": "string", "description": "Optional: Name of the qBittorrent instance" },
                         "filter": { "type": "string", "description": "Filter by status (all, downloading, completed, paused, active, inactive, resumed, stalled, stalled_uploading, stalled_downloading, errored)" },
                         "category": { "type": "string", "description": "Filter by category" },
                         "tag": { "type": "string", "description": "Filter by tag" },
@@ -1196,14 +1182,33 @@ impl McpServer {
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
+        let (api_limit, api_offset) = if search.is_some() {
+            (None, None)
+        } else {
+            (limit, offset)
+        };
+
         let mut torrents = client
-            .get_torrent_list(filter, category, tag, sort, reverse, limit, offset)
+            .get_torrent_list(filter, category, tag, sort, reverse, api_limit, api_offset)
             .await?;
 
-        // Apply name search filter
+        // Apply name search filter and client-side pagination when searching
         if let Some(search_term) = search {
             let search_lower = search_term.to_lowercase();
             torrents.retain(|t| t.name.to_lowercase().contains(&search_lower));
+
+            if let Some(off) = offset {
+                let off = off.max(0) as usize;
+                if off >= torrents.len() {
+                    torrents.clear();
+                } else {
+                    torrents.drain(0..off);
+                }
+            }
+            if let Some(lim) = limit {
+                let lim = lim.max(0) as usize;
+                torrents.truncate(lim);
+            }
         }
 
         let total = torrents.len();
@@ -1298,7 +1303,7 @@ impl McpServer {
                         Self::truncate_str(&t.name, 58),
                         t.progress * 100.0,
                         size,
-                        &t.hash[..12],
+                        Self::short_hash(&t.hash),
                     ));
                 }
                 lines.push(String::new());
@@ -1351,7 +1356,7 @@ impl McpServer {
                         Self::truncate_str(&t.name, 58),
                         t.progress * 100.0,
                         size,
-                        &t.hash[..12],
+                        Self::short_hash(&t.hash),
                     ));
                 }
                 lines.push(String::new());
@@ -1465,6 +1470,15 @@ impl McpServer {
             let truncated: String = s.chars().take(max.saturating_sub(3)).collect();
             format!("{}...", truncated)
         }
+    }
+
+    fn short_hash(hash: &str) -> &str {
+        let len = hash
+            .char_indices()
+            .map(|(i, _)| i)
+            .nth(12)
+            .unwrap_or(hash.len());
+        &hash[..len]
     }
 
     async fn handle_manage_torrents(&self, client: &QBitClient, args: &Value) -> Result<Value> {
