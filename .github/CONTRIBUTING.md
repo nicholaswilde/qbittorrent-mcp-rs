@@ -42,7 +42,7 @@ This project uses **Gemini Conductor** to manage development workflow in a struc
 
 2.  **Follow the Workflow**: Conductor enforces the project's workflow, including test-driven development, code coverage checks, and phase-based commits. Please follow the prompts provided by the agent.
 
-3.  **Do Not Manually Edit Plans**: Avoid manually editing `conductor/tracks/<track_id>/plan.md` unless instructed. The Conductor agent manages task status and commit linking automatically.
+3.  **Do Not Manually Edit Plans**: Avoid manually editing `.agents/conductor/tracks/<track_id>/plan.md` unless instructed. The Conductor agent manages task status and commit linking automatically.
 
 ## Development Setup
 

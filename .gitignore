@@ -49,3 +49,9 @@ lcov.info
 coverage/
 /target/llvm-cov/
 .env
+
+# Agentic tools
+.codegraph/
+.serena/
+.rtk/*
+!.rtk/filters.toml
