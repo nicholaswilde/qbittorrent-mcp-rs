@@ -88,24 +88,20 @@ jobs:
           os: ubuntu-latest
           rust: stable
           target: x86_64-unknown-linux-musl
-          strip: x86_64-linux-musl-strip
         - build: linux-arm
           os: ubuntu-latest
           rust: stable
           target: aarch64-unknown-linux-musl
-          strip: aarch64-linux-musl-strip
           qemu: qemu-aarch64
         - build: linux-armv7
           os: ubuntu-latest
           rust: stable
           target: armv7-unknown-linux-musleabihf
-          strip: arm-linux-musleabihf-strip
           qemu: qemu-arm
         - build: linux-armv6
           os: ubuntu-latest
           rust: stable
           target: arm-unknown-linux-gnueabihf
-          strip: arm-linux-gnueabihf-strip
           qemu: qemu-arm
         - build: macos
           os: macos-latest
@@ -136,6 +132,9 @@ jobs:
 
     - name: Rust Cache
       uses: swatinem/rust-cache@v2
+      with:
+        key: ${{ matrix.target }}
+        cache-targets: false
 
     - name: Use Cross
       if: matrix.os == 'ubuntu-latest' && matrix.target != ''
@@ -171,46 +170,10 @@ jobs:
         echo "target dir is: ${{ env.TARGET_DIR }}"
         echo "bin is: ${{ env.BIN }}"
 
-    - name: Setup Custom Cross Image
-      if: matrix.build == 'linux-armv6'
-      run: |
-        # Create the Dockerfile on the fly
-        echo "FROM ghcr.io/cross-rs/arm-unknown-linux-gnueabihf:main" > Dockerfile.custom
-        echo "USER root" >> Dockerfile.custom
-        echo "RUN apt-get update && apt-get install -y binutils-arm-linux-gnueabihf" >> Dockerfile.custom
-        
-        # Create Cross.toml on the fly
-        echo "[target.arm-unknown-linux-gnueabihf]" > Cross.toml
-        echo "dockerfile = \"./Dockerfile.custom\"" >> Cross.toml
-        
     - name: Build release binary
       shell: bash
       run: |
         ${{ env.CARGO }} build --release --verbose ${{ env.TARGET_FLAGS }}
-
-    - name: Strip release binary (macos)
-      if: matrix.build == 'macos' || matrix.build == 'macos-arm'
-      run: strip "${{ env.BIN }}"
-
-    - name: Strip release binary (cross)
-      if: matrix.build == 'linux' || matrix.build == 'linux-arm' || matrix.build == 'linux-armv7'
-      shell: bash
-      run: |
-        docker run --rm -v \
-          "$PWD/target:/target:Z" \
-          "ghcr.io/cross-rs/${{ matrix.target }}:main" \
-          "${{ matrix.strip }}" \
-          "/$BIN"
-
-    - name: Strip release binary (cross)
-      if: matrix.build == 'linux-armv6'
-      shell: bash
-      run: |
-        docker run --rm -v \
-          "$PWD/target:/target:Z" \
-          --entrypoint /bin/sh \
-          "ghcr.io/cross-rs/${{ matrix.target }}:main" \
-          -c "apt-get update && apt-get install -y binutils-arm-linux-gnueabihf && ${{ matrix.strip }} /$BIN"
 
     - name: Build archive
       shell: bash
