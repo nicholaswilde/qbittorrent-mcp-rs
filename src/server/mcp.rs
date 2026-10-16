@@ -1874,21 +1874,11 @@ impl McpServer {
                                             torrent_name, name
                                         );
 
-                                        // Custom notification
-                                        self.push_notification(
-                                            "notifications/torrent_finished",
-                                            json!({
-                                                "instance": name,
-                                                "hash": hash,
-                                                "name": torrent_name
-                                            }),
-                                        );
-
                                         // Standard resource update notification
                                         self.push_notification(
-                                                    "notifications/resources/updated",
-                                                    json!({ "uri": format!("qbittorrent://{}/torrents", name) }),
-                                                );
+                                            "notifications/resources/updated",
+                                            json!({ "uri": format!("qbittorrent://{}/torrents", name) }),
+                                        );
 
                                         notified_finished
                                             .get_mut(name)
