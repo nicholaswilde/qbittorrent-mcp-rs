@@ -50,8 +50,13 @@ coverage/
 /target/llvm-cov/
 .env
 
-# Agentic tools
+# Agentic tools & MCP Caches
 .codegraph/
 .serena/
+.rumdl_cache/
+.agents/*
+!.agents/skills/
+!.agents/rules/
+!.agents/skills_catalog.md
 .rtk/*
 !.rtk/filters.toml

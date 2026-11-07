@@ -2,10 +2,6 @@
 
 This file tracks all major tracks for the project. Each track has its own detailed plan in its respective folder.
 
-## Completed Tracks
-- [x] [Feature Expansion & Polish](./tracks/feature_expansion_20260126/plan.md)
-- [x] [Comprehensive Testing](./tracks/comprehensive_testing/plan.md)
-
 ## Incomplete Tracks
 - [ ] **Track: Gemini CLI Extension for qBittorrent MCP**
 *Link: [./tracks/gemini_extension_20260212/](./tracks/gemini_extension_20260212/)*
@@ -15,6 +11,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 *Link: [./tracks/version_flag_20260217/](./tracks/version_flag_20260217/)*
 
 ## Archived Tracks
+- [Feature Expansion & Polish](./archive/feature_expansion_20260126/plan.md)
 - [MCP Best Practices & Token Optimization](./archive/mcp_optimization_20260215/plan.md)
 - [GitHub Release Summary Command](./archive/release_summary_20260213/plan.md)
 - [Increase code coverage to >90% with Coveralls](./archive/coverage_90_coveralls_20260213/plan.md)
