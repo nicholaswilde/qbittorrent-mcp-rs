@@ -94,12 +94,12 @@ impl QBitClient {
         if !status.is_success() {
             return Err(anyhow!("Login failed with status: {}", status));
         }
-        // qBittorrent answers 200 with "Fails." for a wrong username or password.
-        match resp.text().await?.trim() {
-            "Ok." => Ok(()),
-            "Fails." => Err(anyhow!("Login failed: wrong username or password")),
-            other => Err(anyhow!("Login failed: unexpected response '{}'", other)),
+        // A wrong username or password still gets 2xx, with body "Fails.". Success is "Ok."
+        // on older versions and an empty body on newer ones (5.3), so only "Fails." is a failure.
+        if resp.text().await?.trim() == "Fails." {
+            return Err(anyhow!("Login failed: wrong username or password"));
         }
+        Ok(())
     }
 
     pub async fn logout(&self) -> Result<()> {
