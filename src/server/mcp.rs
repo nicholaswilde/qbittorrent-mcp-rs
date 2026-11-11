@@ -36,6 +36,7 @@ pub struct JsonRpcError {
 }
 
 struct McpState {
+    // shortcut: lazy-mode state is shared by every connected client, fine for one or two clients; move into per-session state if many clients connect.
     lazy_mode: bool,
     tools_loaded: bool,
     should_notify: bool,
@@ -47,6 +48,97 @@ struct McpState {
 pub struct McpServer {
     clients: HashMap<String, QBitClient>,
     state: Arc<Mutex<McpState>>,
+}
+
+/// Error marker for JSON-RPC "invalid params" (-32602).
+#[derive(Debug)]
+struct InvalidParams(String);
+
+impl std::fmt::Display for InvalidParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for InvalidParams {}
+
+/// Error marker for JSON-RPC "method not found" (-32601).
+#[derive(Debug)]
+struct MethodNotFound(String);
+
+impl std::fmt::Display for MethodNotFound {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Method not found: {}", self.0)
+    }
+}
+
+impl std::error::Error for MethodNotFound {}
+
+/// Builds an MCP text result.
+fn text_result(text: impl Into<String>) -> Value {
+    json!({ "content": [{ "type": "text", "text": text.into() }] })
+}
+
+fn arg_str<'a>(args: &'a Value, key: &str) -> Result<&'a str> {
+    args.get(key)
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow::anyhow!("Missing {}", key))
+}
+
+fn arg_bool(args: &Value, key: &str) -> Result<bool> {
+    args.get(key)
+        .and_then(|v| v.as_bool())
+        .ok_or_else(|| anyhow::anyhow!("Missing {}", key))
+}
+
+/// Decodes standard or URL-safe base64 (padding and whitespace optional).
+fn decode_base64(input: &str) -> Result<Vec<u8>> {
+    let mut out = Vec::with_capacity(input.len() * 3 / 4);
+    let (mut buf, mut bits) = (0u32, 0u32);
+    for c in input
+        .bytes()
+        .filter(|c| !c.is_ascii_whitespace() && *c != b'=')
+    {
+        let v = match c {
+            b'A'..=b'Z' => c - b'A',
+            b'a'..=b'z' => c - b'a' + 26,
+            b'0'..=b'9' => c - b'0' + 52,
+            b'+' | b'-' => 62,
+            b'/' | b'_' => 63,
+            _ => anyhow::bail!("Invalid base64 character: {}", c as char),
+        };
+        buf = (buf << 6) | v as u32;
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push((buf >> bits) as u8);
+        }
+    }
+    Ok(out)
+}
+
+/// Preference keys the AI may not change: they run programs, control Web UI access or hold secrets.
+fn is_blocked_preference(key: &str) -> bool {
+    let k = key.to_ascii_lowercase();
+    k.starts_with("autorun")
+        || k.starts_with("web_ui_")
+        || k.starts_with("bypass_")
+        || k.contains("password")
+        || k.starts_with("mail_notification")
+        || k.starts_with("dyndns")
+        || k.starts_with("proxy")
+        || k == "alternative_webui_enabled"
+        || k == "alternative_webui_path"
+}
+
+/// Drops every key that holds a secret before preferences are shown to the AI.
+fn redact_preferences(prefs: &mut Value) {
+    if let Some(obj) = prefs.as_object_mut() {
+        obj.retain(|k, _| {
+            let k = k.to_ascii_lowercase();
+            !(k.contains("password") || k.contains("secret") || k.ends_with("_key"))
+        });
+    }
 }
 
 impl McpServer {
@@ -82,33 +174,18 @@ impl McpServer {
         }));
     }
 
-    async fn flush_notifications_async<W: tokio::io::AsyncWrite + Unpin>(
-        &self,
-        writer: &mut W,
-    ) -> Result<()> {
-        use tokio::io::AsyncWriteExt;
-
+    /// Takes every pending notification (tool list change first) and clears the queue.
+    pub fn take_notifications(&self) -> Vec<Value> {
+        let mut state = self.state.lock().unwrap();
         let mut pending = Vec::new();
-        {
-            let mut state = self.state.lock().unwrap();
-            if state.should_notify {
-                state.should_notify = false;
-                pending.push(json!({
-                    "jsonrpc": "2.0",
-                    "method": "notifications/tools/list_changed"
-                }));
-            }
-            while !state.notification_queue.is_empty() {
-                pending.push(state.notification_queue.remove(0));
-            }
+        if std::mem::take(&mut state.should_notify) {
+            pending.push(json!({
+                "jsonrpc": "2.0",
+                "method": "notifications/tools/list_changed"
+            }));
         }
-
-        for n in pending {
-            let out = serde_json::to_string(&n)? + "\n";
-            writer.write_all(out.as_bytes()).await?;
-        }
-        writer.flush().await?;
-        Ok(())
+        pending.append(&mut state.notification_queue);
+        pending
     }
 
     fn get_client(&self, instance: Option<&str>) -> Result<&QBitClient> {
@@ -129,14 +206,40 @@ impl McpServer {
         }
     }
 
-    pub fn check_notification(&self) -> bool {
-        let mut state = self.state.lock().unwrap();
-        if state.should_notify {
-            state.should_notify = false;
-            true
-        } else {
-            false
-        }
+    /// Runs one JSON-RPC request and builds the response; `None` for notifications (no id).
+    /// A failed tool call is returned as an `isError` result, as MCP expects, so the model can read it.
+    pub async fn handle_rpc(&self, req: JsonRpcRequest) -> Option<JsonRpcResponse> {
+        let id = req.id.clone();
+        let is_tool_call = req.method == "tools/call";
+        let resp = self.handle_request(req).await;
+        let Some(id) = id else {
+            if let Err(e) = resp {
+                error!("Error handling notification: {}", e);
+            }
+            return None;
+        };
+        let (result, error) = match resp {
+            Ok(v) => (Some(v), None),
+            Err(e) if e.is::<MethodNotFound>() => (None, Some((-32601, e.to_string()))),
+            Err(e) if e.is::<InvalidParams>() => (None, Some((-32602, e.to_string()))),
+            Err(e) if is_tool_call => (
+                Some(
+                    json!({ "content": [{ "type": "text", "text": format!("Error: {:#}", e) }], "isError": true }),
+                ),
+                None,
+            ),
+            Err(e) => (None, Some((-32603, e.to_string()))),
+        };
+        Some(JsonRpcResponse {
+            jsonrpc: "2.0".to_string(),
+            id: Some(id),
+            result,
+            error: error.map(|(code, message)| JsonRpcError {
+                code,
+                message,
+                data: None,
+            }),
+        })
     }
 
     pub async fn run_stdio(&mut self) -> Result<()> {
@@ -144,71 +247,36 @@ impl McpServer {
         let mut reader = BufReader::new(stdin()).lines();
         let mut stdout = stdout();
 
-        loop {
-            if !self.is_running() {
-                break;
-            }
-            tokio::task::yield_now().await;
-            tokio::select! {
-                line_res = reader.next_line() => {
-                    let line = match line_res? {
-                        Some(l) => l,
-                        None => break, // EOF
-                    };
-                    let input = line.trim();
-                    if input.is_empty() {
-                        continue;
-                    }
+        while self.is_running() {
+            let line = tokio::select! {
+                line_res = reader.next_line() => match line_res? {
+                    Some(l) => Some(l),
+                    None => break, // EOF
+                },
+                _ = sleep(Duration::from_millis(100)) => None,
+            };
 
+            let mut out = String::new();
+            if let Some(line) = line {
+                let input = line.trim();
+                if !input.is_empty() {
                     debug!("Received: {}", input);
-
                     match serde_json::from_str::<JsonRpcRequest>(input) {
                         Ok(req) => {
-                            let id = req.id.clone();
-                            let resp = self.handle_request(req).await;
-
-                            if let Some(req_id) = id {
-                                let json_resp = match resp {
-                                    Ok(result) => JsonRpcResponse {
-                                        jsonrpc: "2.0".to_string(),
-                                        id: Some(req_id),
-                                        result: Some(result),
-                                        error: None,
-                                    },
-                                    Err(e) => JsonRpcResponse {
-                                        jsonrpc: "2.0".to_string(),
-                                        id: Some(req_id),
-                                        result: None,
-                                        error: Some(JsonRpcError {
-                                            code: -32603,
-                                            message: e.to_string(),
-                                            data: None,
-                                        }),
-                                    },
-                                };
-
-                                let out = serde_json::to_string(&json_resp)? + "\n";
-                                stdout.write_all(out.as_bytes()).await?;
-                                stdout.flush().await?;
-                            } else {
-                                // Notification, no response expected
-                                if let Err(e) = resp {
-                                    error!("Error handling notification: {}", e);
-                                }
+                            if let Some(resp) = self.handle_rpc(req).await {
+                                out += &(serde_json::to_string(&resp)? + "\n");
                             }
                         }
-                        Err(e) => {
-                            error!("Failed to parse JSON-RPC: {}", e);
-                        }
+                        Err(e) => error!("Failed to parse JSON-RPC: {}", e),
                     }
-                    self.flush_notifications_async(&mut stdout).await?;
                 }
-                _ = sleep(Duration::from_millis(100)) => {
-                    if !self.is_running() {
-                        break;
-                    }
-                    self.flush_notifications_async(&mut stdout).await?;
-                }
+            }
+            for n in self.take_notifications() {
+                out += &(serde_json::to_string(&n)? + "\n");
+            }
+            if !out.is_empty() {
+                stdout.write_all(out.as_bytes()).await?;
+                stdout.flush().await?;
             }
         }
         Ok(())
@@ -249,7 +317,7 @@ impl McpServer {
                     let args = params.get("arguments").unwrap_or(&Value::Null);
                     self.handle_prompt_get(name, args).await
                 } else {
-                    anyhow::bail!("Missing params for prompts/get");
+                    Err(InvalidParams("Missing params for prompts/get".into()).into())
                 }
             }
             "tools/list" => Ok(json!({
@@ -261,7 +329,7 @@ impl McpServer {
                     let args = params.get("arguments").unwrap_or(&Value::Null);
                     self.call_tool(name, args).await
                 } else {
-                    anyhow::bail!("Missing params for tools/call");
+                    Err(InvalidParams("Missing params for tools/call".into()).into())
                 }
             }
             "resources/list" => Ok(json!({
@@ -275,12 +343,10 @@ impl McpServer {
                     let uri = params.get("uri").and_then(|n| n.as_str()).unwrap_or("");
                     self.handle_resource_read(uri).await
                 } else {
-                    anyhow::bail!("Missing params for resources/read");
+                    Err(InvalidParams("Missing params for resources/read".into()).into())
                 }
             }
-            _ => {
-                anyhow::bail!("Method not found: {}", req.method);
-            }
+            _ => Err(MethodNotFound(req.method).into()),
         }
     }
 
@@ -333,144 +399,32 @@ impl McpServer {
     }
 
     async fn handle_resource_read(&self, uri: &str) -> Result<Value> {
-        let re_torrents = Regex::new(r"qbittorrent://([^/]+)/torrents")?;
-        let re_transfer = Regex::new(r"qbittorrent://([^/]+)/transfer")?;
-        let re_categories = Regex::new(r"qbittorrent://([^/]+)/categories")?;
-        let re_props = Regex::new(r"qbittorrent://([^/]+)/torrent/([^/]+)/properties")?;
-        let re_files = Regex::new(r"qbittorrent://([^/]+)/torrent/([^/]+)/files")?;
-        let re_trackers = Regex::new(r"qbittorrent://([^/]+)/torrent/([^/]+)/trackers")?;
-
-        if let Some(caps) = re_torrents.captures(uri) {
-            let instance = &caps[1];
-            let client = self.get_client(Some(instance))?;
-            let torrents = client
-                .get_torrent_list(None, None, None, None, None, None, None)
-                .await?;
-            let content = serde_json::to_string_pretty(&torrents)?;
-            return Ok(json!({
-                "contents": [{
-                    "uri": uri,
-                    "mimeType": "application/json",
-                    "text": content
-                }]
-            }));
-        }
-
-        if let Some(caps) = re_transfer.captures(uri) {
-            let instance = &caps[1];
-            let client = self.get_client(Some(instance))?;
-            let info = client.get_global_transfer_info().await?;
-            let content = serde_json::to_string_pretty(&info)?;
-            return Ok(json!({
-                "contents": [{
-                    "uri": uri,
-                    "mimeType": "application/json",
-                    "text": content
-                }]
-            }));
-        }
-
-        if let Some(caps) = re_categories.captures(uri) {
-            let instance = &caps[1];
-            let client = self.get_client(Some(instance))?;
-            let categories = client.get_categories().await?;
-            let content = serde_json::to_string_pretty(&categories)?;
-            return Ok(json!({
-                "contents": [{
-                    "uri": uri,
-                    "mimeType": "application/json",
-                    "text": content
-                }]
-            }));
-        }
-
-        if let Some(caps) = re_props.captures(uri) {
-            let instance = &caps[1];
-            let hash = &caps[2];
-            let client = self.get_client(Some(instance))?;
-            let props = client.get_torrent_properties(hash).await?;
-            let content = serde_json::to_string_pretty(&props)?;
-            return Ok(json!({
-                "contents": [{
-                    "uri": uri,
-                    "mimeType": "application/json",
-                    "text": content
-                }]
-            }));
-        }
-
-        if let Some(caps) = re_files.captures(uri) {
-            let instance = &caps[1];
-            let hash = &caps[2];
-            let client = self.get_client(Some(instance))?;
-            let files = client.get_torrent_files(hash).await?;
-            let content = serde_json::to_string_pretty(&files)?;
-            return Ok(json!({
-                "contents": [{
-                    "uri": uri,
-                    "mimeType": "application/json",
-                    "text": content
-                }]
-            }));
-        }
-
-        if let Some(caps) = re_trackers.captures(uri) {
-            let instance = &caps[1];
-            let hash = &caps[2];
-            let client = self.get_client(Some(instance))?;
-            let trackers = client.get_torrent_trackers(hash).await?;
-            let content = serde_json::to_string_pretty(&trackers)?;
-            return Ok(json!({
-                "contents": [{
-                    "uri": uri,
-                    "mimeType": "application/json",
-                    "text": content
-                }]
-            }));
-        }
-
-        // Fallback for legacy URIs (without instance) - use default client
-        match uri {
-            "qbittorrent://torrents" => {
-                let client = self.get_client(None)?;
-                let torrents = client
+        static RE: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+            Regex::new(r"^qbittorrent://(?:([^/]+)/)?(?:torrent/([^/]+)/)?(torrents|transfer|categories|properties|files|trackers)$").unwrap()
+        });
+        let caps = RE
+            .captures(uri)
+            .ok_or_else(|| InvalidParams(format!("Resource not found: {}", uri)))?;
+        let client = self.get_client(caps.get(1).map(|m| m.as_str()))?;
+        let hash = caps.get(2).map(|m| m.as_str());
+        let content = match (&caps[3], hash) {
+            ("torrents", None) => serde_json::to_string(
+                &client
                     .get_torrent_list(None, None, None, None, None, None, None)
-                    .await?;
-                let content = serde_json::to_string_pretty(&torrents)?;
-                Ok(json!({
-                    "contents": [{
-                        "uri": uri,
-                        "mimeType": "application/json",
-                        "text": content
-                    }]
-                }))
+                    .await?,
+            )?,
+            ("transfer", None) => serde_json::to_string(&client.get_global_transfer_info().await?)?,
+            ("categories", None) => serde_json::to_string(&client.get_categories().await?)?,
+            ("properties", Some(h)) => {
+                serde_json::to_string(&client.get_torrent_properties(h).await?)?
             }
-            "qbittorrent://transfer" => {
-                let client = self.get_client(None)?;
-                let info = client.get_global_transfer_info().await?;
-                let content = serde_json::to_string_pretty(&info)?;
-                Ok(json!({
-                    "contents": [{
-                        "uri": uri,
-                        "mimeType": "application/json",
-                        "text": content
-                    }]
-                }))
-            }
-            "qbittorrent://categories" => {
-                let client = self.get_client(None)?;
-                let categories = client.get_categories().await?;
-                let content = serde_json::to_string_pretty(&categories)?;
-                Ok(json!({
-                    "contents": [{
-                        "uri": uri,
-                        "mimeType": "application/json",
-                        "text": content
-                    }]
-                }))
-            }
-            _ => anyhow::bail!("Resource not found: {}", uri),
-        }
+            ("files", Some(h)) => serde_json::to_string(&client.get_torrent_files(h).await?)?,
+            ("trackers", Some(h)) => serde_json::to_string(&client.get_torrent_trackers(h).await?)?,
+            _ => return Err(InvalidParams(format!("Resource not found: {}", uri)).into()),
+        };
+        Ok(json!({
+            "contents": [{ "uri": uri, "mimeType": "application/json", "text": content }]
+        }))
     }
 
     fn get_prompt_definitions(&self) -> Vec<Value> {
@@ -606,7 +560,7 @@ impl McpServer {
                             "text": "As an AI agent interacting with the qBittorrent MCP server, you must adhere to the following Rules of Engagement:\n\n\
                                      1. **State Verification**: Always verify the current state of a torrent (via `list_torrents` or resources) before performing actions like pause, resume, or delete.\n\
                                      2. **Destructive Actions**: Clearly inform the user and obtain confirmation before calling `delete_torrent` or `shutdown_app`. For these \"destructive\" actions, use the `destructiveHint` annotation or require a separate confirmation step.\n\
-                                     3. **Search Etiquette**: Search is asynchronous. Use `get_search_results` for polling and always call `stop_search` once finished to save resources.\n\
+                                     3. **Search Etiquette**: Search is asynchronous. `search_torrents` waits a few seconds, returns the best results it has, and cleans up the search job itself.\n\
                                      4. **Error Handling**: Treat errors as information for self-correction. Return helpful hints and use `isError: true` to prevent hallucination.\n\
                                      5. **Idempotency**: Avoid redundant commands (e.g., do not pause an already paused torrent).\n\
                                      6. **Semantic Feedback**: Translate technical tool results into meaningful context for the user.\n\
@@ -679,7 +633,7 @@ impl McpServer {
                         "search": { "type": "string", "description": "Case-insensitive substring search on torrent name" },
                         "sort": { "type": "string", "description": "Sort by column name (e.g., name, size, progress, added_on, dlspeed, upspeed, ratio, eta, state, category, tags)" },
                         "reverse": { "type": "boolean", "description": "True to reverse sort order" },
-                        "limit": { "type": "integer", "description": "Maximum number of torrents to return" },
+                        "limit": { "type": "integer", "description": "Maximum number of torrents to return (default 50 for listings; stats_only and group_by_* always cover all torrents)" },
                         "offset": { "type": "integer", "description": "Number of torrents to skip" },
                         "fields": { "type": "array", "items": { "type": "string" }, "description": "List of fields to include in output (e.g., ['name', 'progress', 'state', 'hash']). Omit for all fields. Available: hash, name, size, progress, dlspeed, upspeed, priority, num_seeds, num_leechs, num_incomplete, num_complete, ratio, eta, state, added_on, completion_on, seq_dl, f_l_piece_prio, category, tags, super_seeding, force_start" },
                         "summary": { "type": "boolean", "description": "Return a compact one-line-per-torrent table (name, progress, state, size, category, hash) instead of full JSON" },
@@ -706,7 +660,10 @@ impl McpServer {
                                 "set_category", "add_tags", "remove_tags",
                                 "set_share_limits", "set_speed_limits",
                                 "toggle_sequential", "toggle_first_last_prio",
-                                "set_force_start", "set_super_seeding"
+                                "set_force_start", "set_super_seeding",
+                                "set_location", "rename", "set_auto_management",
+                                "top_prio", "bottom_prio", "increase_prio", "decrease_prio",
+                                "add_peers"
                             ],
                             "description": "Action to perform"
                         },
@@ -717,22 +674,37 @@ impl McpServer {
                         "inactive_seeding_time_limit": { "type": "integer", "description": "For 'set_share_limits' (minutes)" },
                         "dl_limit": { "type": "integer", "description": "For 'set_speed_limits' (bytes/s)" },
                         "up_limit": { "type": "integer", "description": "For 'set_speed_limits' (bytes/s)" },
-                        "value": { "type": "boolean", "description": "For 'set_force_start' or 'set_super_seeding'" }
+                        "value": { "type": "boolean", "description": "For 'set_force_start', 'set_super_seeding' or 'set_auto_management'" },
+                        "location": { "type": "string", "description": "For 'set_location': new save folder (moves the data)" },
+                        "name": { "type": "string", "description": "For 'rename': new torrent name (single hash)" },
+                        "peers": { "type": "string", "description": "For 'add_peers': host:port, pipe-separated" }
                     },
                     "required": ["hashes", "action"]
                 }
             }),
             json!({
                 "name": "add_torrent",
-                "description": "Add a new torrent",
+                "description": "Add torrents by magnet/HTTP URL or by uploading a .torrent file (base64). Give 'url' or 'torrent_file_base64'.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "url": { "type": "string", "description": "Magnet URI or HTTP URL" },
+                        "url": { "type": "string", "description": "Magnet URI or HTTP URL (newline-separated for several)" },
+                        "torrent_file_base64": { "type": "string", "description": "Contents of a .torrent file, base64-encoded" },
                         "save_path": { "type": "string", "description": "Optional save path" },
-                        "category": { "type": "string", "description": "Optional category" }
+                        "category": { "type": "string", "description": "Optional category" },
+                        "tags": { "type": "string", "description": "Comma-separated tags" },
+                        "rename": { "type": "string", "description": "New torrent name" },
+                        "paused": { "type": "boolean", "description": "Add in stopped/paused state" },
+                        "skip_checking": { "type": "boolean", "description": "Skip hash checking" },
+                        "sequential_download": { "type": "boolean", "description": "Download pieces in order" },
+                        "first_last_piece_prio": { "type": "boolean", "description": "Prioritize first and last pieces" },
+                        "auto_tmm": { "type": "boolean", "description": "Use automatic torrent management" },
+                        "dl_limit": { "type": "integer", "description": "Download limit (bytes/s)" },
+                        "up_limit": { "type": "integer", "description": "Upload limit (bytes/s)" },
+                        "ratio_limit": { "type": "number", "description": "Share ratio limit" },
+                        "seeding_time_limit": { "type": "integer", "description": "Seeding time limit (minutes)" }
                     },
-                    "required": ["url"]
+                    "required": []
                 }
             }),
             json!({
@@ -760,11 +732,15 @@ impl McpServer {
             }),
             json!({
                 "name": "inspect_torrent",
-                "description": "Comprehensive inspection of a torrent (properties, files, and trackers in one call)",
+                "description": "Comprehensive inspection of a torrent (properties, files, and trackers in one call; peers, web seeds and pieces on request)",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "hash": { "type": "string", "description": "Torrent hash" }
+                        "hash": { "type": "string", "description": "Torrent hash" },
+                        "include_peers": { "type": "boolean", "description": "Include connected peers" },
+                        "include_webseeds": { "type": "boolean", "description": "Include web seeds" },
+                        "include_pieces": { "type": "boolean", "description": "Include piece state counts (not downloaded / downloading / downloaded)" },
+                        "include_piece_hashes": { "type": "boolean", "description": "Include every piece hash (large)" }
                     },
                     "required": ["hash"]
                 }
@@ -776,6 +752,31 @@ impl McpServer {
                     "type": "object",
                     "properties": {},
                     "required": []
+                }
+            }),
+            json!({
+                "name": "manage_categories",
+                "description": "Create, edit or remove categories",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "action": { "type": "string", "enum": ["create", "edit", "remove"] },
+                        "name": { "type": "string", "description": "Category name (newline-separated for several when removing)" },
+                        "save_path": { "type": "string", "description": "Save path for 'create' or 'edit'" }
+                    },
+                    "required": ["action", "name"]
+                }
+            }),
+            json!({
+                "name": "manage_tags",
+                "description": "List, create or delete tags",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "action": { "type": "string", "enum": ["list", "create", "delete"] },
+                        "tags": { "type": "string", "description": "Comma-separated tags for 'create' or 'delete'" }
+                    },
+                    "required": ["action"]
                 }
             }),
             json!({
@@ -793,12 +794,13 @@ impl McpServer {
             }),
             json!({
                 "name": "cleanup_completed",
-                "description": "Bulk remove completed torrents based on ratio or age. DESTRUCTIVE: Inform the user and confirm before calling.",
+                "description": "Bulk remove completed torrents based on ratio and/or age. Runs as a dry run (lists matches) unless dry_run is false. DESTRUCTIVE: show the dry-run list to the user and confirm before calling with dry_run=false.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "min_ratio": { "type": "number", "description": "Minimum ratio to trigger removal" },
-                        "max_age_days": { "type": "integer", "description": "Maximum age in days since completion to trigger removal" },
+                        "min_ratio": { "type": "number", "description": "Remove when ratio is at least this (must be > 0)" },
+                        "max_age_days": { "type": "integer", "description": "Remove when completed at least this many days ago (must be > 0). With min_ratio, both must match." },
+                        "dry_run": { "type": "boolean", "description": "Only list what would be removed (default true)" },
                         "delete_files": { "type": "boolean", "description": "Also delete downloaded files from disk" }
                     },
                     "required": ["delete_files"]
@@ -896,12 +898,14 @@ impl McpServer {
         vec![
             json!({
                 "name": "search_torrents",
-                "description": "Search for torrents. ASYNCHRONOUS: Results might be incomplete on the first call. Use get_search_results for polling if needed.",
+                "description": "Search for torrents with the installed search plugins. Waits up to 'wait_seconds' and returns the results found so far, then removes the search job.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "query": { "type": "string", "description": "Search query" },
-                        "category": { "type": "string", "description": "Optional category" }
+                        "category": { "type": "string", "description": "Optional category" },
+                        "limit": { "type": "integer", "description": "Maximum results to return (default 25, max 200)" },
+                        "wait_seconds": { "type": "integer", "description": "How long to wait for results (default 5, max 30)" }
                     },
                     "required": ["query"]
                 }
@@ -962,17 +966,32 @@ impl McpServer {
     }
 
     fn get_transfer_tools(&self) -> Vec<Value> {
-        vec![json!({
-            "name": "ban_peers",
-            "description": "Ban a list of peers",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "peers": { "type": "string", "description": "Peers to ban (host:port, pipe-separated)" }
-                },
-                "required": ["peers"]
-            }
-        })]
+        vec![
+            json!({
+                "name": "set_global_speed_limits",
+                "description": "Set global download/upload limits and/or turn alternative speed limits on or off. Current values are in get_system_info.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "dl_limit": { "type": "integer", "description": "Global download limit (bytes/s, 0 = unlimited)" },
+                        "up_limit": { "type": "integer", "description": "Global upload limit (bytes/s, 0 = unlimited)" },
+                        "alt_speed_enabled": { "type": "boolean", "description": "True to turn alternative speed limits on, false to turn them off" }
+                    },
+                    "required": []
+                }
+            }),
+            json!({
+                "name": "ban_peers",
+                "description": "Ban a list of peers",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "peers": { "type": "string", "description": "Peers to ban (host:port, pipe-separated)" }
+                    },
+                    "required": ["peers"]
+                }
+            }),
+        ]
     }
 
     fn get_rss_tools(&self) -> Vec<Value> {
@@ -1020,6 +1039,21 @@ impl McpServer {
                 }
             }),
             json!({
+                "name": "manage_rss",
+                "description": "Other RSS actions: remove a feed/folder, add a folder, mark as read, refresh, remove or rename a rule, or list articles a rule matches",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "action": { "type": "string", "enum": ["remove_item", "add_folder", "mark_as_read", "refresh_item", "remove_rule", "rename_rule", "matching_articles"] },
+                        "path": { "type": "string", "description": "Feed/folder path for item actions" },
+                        "article_id": { "type": "string", "description": "For 'mark_as_read': one article (omit for the whole feed)" },
+                        "rule_name": { "type": "string", "description": "Rule name for rule actions" },
+                        "new_rule_name": { "type": "string", "description": "For 'rename_rule'" }
+                    },
+                    "required": ["action"]
+                }
+            }),
+            json!({
                 "name": "move_rss_item",
                 "description": "Move an RSS item (feed or folder)",
                 "inputSchema": {
@@ -1038,13 +1072,25 @@ impl McpServer {
         vec![
             json!({
                 "name": "set_app_preferences",
-                "description": "Set one or more application preferences",
+                "description": "Set one or more application preferences. Keys that run programs, control Web UI access, or hold passwords are refused.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "preferences": { "type": "string", "description": "JSON string of preferences to update" }
                     },
                     "required": ["preferences"]
+                }
+            }),
+            json!({
+                "name": "manage_cookies",
+                "description": "Get or set the cookies qBittorrent sends when downloading .torrent files from URLs",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "action": { "type": "string", "enum": ["get", "set"] },
+                        "cookies": { "type": "string", "description": "For 'set': JSON array of {name, domain, path, value, expirationDate}" }
+                    },
+                    "required": ["action"]
                 }
             }),
             json!({
@@ -1072,7 +1118,7 @@ impl McpServer {
             }),
             json!({
                 "name": "get_system_info",
-                "description": "Comprehensive system information (transfer speeds, preferences, version, and build info in one call)",
+                "description": "Comprehensive system information (transfer speeds and limits, alternative speed mode, preferences without secrets, versions, build info, default save path)",
                 "inputSchema": {
                     "type": "object",
                     "properties": {},
@@ -1108,6 +1154,8 @@ impl McpServer {
             "get_torrent_files" => self.handle_get_torrent_files(client, args).await,
             "inspect_torrent" => self.handle_inspect_torrent(client, args).await,
             "get_categories" => self.handle_get_categories(client).await,
+            "manage_categories" => self.handle_manage_categories(client, args).await,
+            "manage_tags" => self.handle_manage_tags(client, args).await,
             "wait_for_torrent_status" => self.handle_wait_for_torrent_status(client, args).await,
             "cleanup_completed" => self.handle_cleanup_completed(client, args).await,
             "mass_rename" => self.handle_mass_rename(client, args).await,
@@ -1132,16 +1180,19 @@ impl McpServer {
             "set_rss_rule" => self.handle_set_rss_rule(client, args).await,
             "get_rss_rules" => self.handle_get_rss_rules(client).await,
             "move_rss_item" => self.handle_move_rss_item(client, args).await,
+            "manage_rss" => self.handle_manage_rss(client, args).await,
 
             // Transfer / App
             "ban_peers" => self.handle_ban_peers(client, args).await,
+            "set_global_speed_limits" => self.handle_set_global_speed_limits(client, args).await,
+            "manage_cookies" => self.handle_manage_cookies(client, args).await,
             "set_app_preferences" => self.handle_set_app_preferences(client, args).await,
             "get_main_log" => self.handle_get_main_log(client, args).await,
             "get_peer_log" => self.handle_get_peer_log(client, args).await,
             "get_system_info" => self.handle_get_system_info(client).await,
             "shutdown_app" => self.handle_shutdown_app(client).await,
 
-            _ => anyhow::bail!("Unknown tool: {}", name),
+            _ => Err(InvalidParams(format!("Unknown tool: {}", name)).into()),
         }
     }
 
@@ -1211,7 +1262,6 @@ impl McpServer {
             }
         }
 
-        let total = torrents.len();
         let group_by_state = args
             .get("group_by_state")
             .and_then(|v| v.as_bool())
@@ -1224,6 +1274,24 @@ impl McpServer {
             .get("stats_only")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
+
+        // Listings default to 50 torrents so one call cannot flood the model's context.
+        const DEFAULT_LIMIT: usize = 50;
+        let mut note = String::new();
+        if limit.is_none()
+            && !stats_only
+            && !group_by_state
+            && !group_by_category
+            && torrents.len() > DEFAULT_LIMIT
+        {
+            note = format!(
+                "Showing {} of {} torrents. Use limit/offset, search, or a filter to see more.",
+                DEFAULT_LIMIT,
+                torrents.len()
+            );
+            torrents.truncate(DEFAULT_LIMIT);
+        }
+        let total = torrents.len();
 
         // Stats only mode: aggregate counts, no individual torrents
         if stats_only {
@@ -1388,7 +1456,11 @@ impl McpServer {
                 ));
             }
             let text = lines.join("\n");
-            return Ok(json!({ "content": [{ "type": "text", "text": text }] }));
+            return Ok(text_result(if note.is_empty() {
+                text
+            } else {
+                format!("{}\n{}", note, text)
+            }));
         }
 
         // Field selection: filter JSON keys
@@ -1415,17 +1487,25 @@ impl McpServer {
                     Value::Object(picked)
                 })
                 .collect();
-            let text = serde_json::to_string_pretty(&json!({
+            let text = serde_json::to_string(&json!({
                 "total": total,
                 "torrents": filtered,
             }))?;
-            return Ok(json!({ "content": [{ "type": "text", "text": text }] }));
+            return Ok(text_result(if note.is_empty() {
+                text
+            } else {
+                format!("{}\n{}", note, text)
+            }));
         }
 
         // Full output (with optional properties/files)
         if !include_properties && !include_files {
-            let text = serde_json::to_string_pretty(&torrents)?;
-            return Ok(json!({ "content": [{ "type": "text", "text": text }] }));
+            let text = serde_json::to_string(&torrents)?;
+            return Ok(text_result(if note.is_empty() {
+                text
+            } else {
+                format!("{}\n{}", note, text)
+            }));
         }
 
         let mut detailed_torrents = Vec::new();
@@ -1440,8 +1520,12 @@ impl McpServer {
             detailed_torrents.push(detailed);
         }
 
-        let text = serde_json::to_string_pretty(&detailed_torrents)?;
-        Ok(json!({ "content": [{ "type": "text", "text": text }] }))
+        let text = serde_json::to_string(&detailed_torrents)?;
+        Ok(text_result(if note.is_empty() {
+            text
+        } else {
+            format!("{}\n{}", note, text)
+        }))
     }
 
     fn format_size(bytes: i64) -> String {
@@ -1562,6 +1646,26 @@ impl McpServer {
                     .ok_or(anyhow::anyhow!("Missing value"))?;
                 client.set_super_seeding(hashes, value).await?;
             }
+            "set_location" => {
+                client
+                    .set_location(hashes, arg_str(args, "location")?)
+                    .await?
+            }
+            "rename" => {
+                client
+                    .rename_torrent(hashes, arg_str(args, "name")?)
+                    .await?
+            }
+            "set_auto_management" => {
+                client
+                    .set_auto_management(hashes, arg_bool(args, "value")?)
+                    .await?
+            }
+            "top_prio" => client.set_queue_priority(hashes, "topPrio").await?,
+            "bottom_prio" => client.set_queue_priority(hashes, "bottomPrio").await?,
+            "increase_prio" => client.set_queue_priority(hashes, "increasePrio").await?,
+            "decrease_prio" => client.set_queue_priority(hashes, "decreasePrio").await?,
+            "add_peers" => client.add_peers(hashes, arg_str(args, "peers")?).await?,
             _ => anyhow::bail!("Unsupported action: {}", action),
         }
 
@@ -1571,41 +1675,96 @@ impl McpServer {
     }
 
     async fn handle_search_torrents(&self, client: &QBitClient, args: &Value) -> Result<Value> {
-        let query = args
-            .get("query")
-            .and_then(|v| v.as_str())
-            .ok_or(anyhow::anyhow!("Missing query"))?;
+        let query = arg_str(args, "query")?;
         let category = args.get("category").and_then(|v| v.as_str());
+        let limit = args
+            .get("limit")
+            .and_then(|v| v.as_i64())
+            .unwrap_or(25)
+            .clamp(1, 200);
+        let wait = args
+            .get("wait_seconds")
+            .and_then(|v| v.as_i64())
+            .unwrap_or(5)
+            .clamp(1, 30);
 
         let id = client.start_search(query, category).await?;
-
-        let mut final_results = Vec::new();
-        for _ in 0..5 {
+        for _ in 0..wait {
             sleep(Duration::from_secs(1)).await;
-            let resp = client.get_search_results(id, None, None).await;
-            if let Ok(r) = resp {
-                if r.status == "Stopped" {
-                    final_results = r.results;
-                    break;
-                }
-                final_results = r.results;
+            if client
+                .get_search_status(id)
+                .await
+                .is_ok_and(|s| s == "Stopped")
+            {
+                break;
             }
         }
+        let results = client.get_search_results(id, Some(limit), None).await;
         let _ = client.stop_search(id).await;
         let _ = client.delete_search(id).await;
-        let text = serde_json::to_string_pretty(&final_results)?;
-        Ok(json!({ "content": [{ "type": "text", "text": text }] }))
+        let results = results?;
+        let text = serde_json::to_string(&json!({
+            "total_found": results.total,
+            "returned": results.results.len(),
+            "results": results.results,
+        }))?;
+        Ok(text_result(text))
     }
 
     async fn handle_add_torrent(&self, client: &QBitClient, args: &Value) -> Result<Value> {
-        let url = args
-            .get("url")
-            .and_then(|v| v.as_str())
-            .ok_or(anyhow::anyhow!("Missing url"))?;
-        let save_path = args.get("save_path").and_then(|v| v.as_str());
-        let category = args.get("category").and_then(|v| v.as_str());
-        client.add_torrent(url, save_path, category).await?;
-        Ok(json!({ "content": [{ "type": "text", "text": "Torrent added successfully" }] }))
+        let url = args.get("url").and_then(|v| v.as_str());
+        let file = match args.get("torrent_file_base64").and_then(|v| v.as_str()) {
+            Some(b64) => Some(("upload.torrent".to_string(), decode_base64(b64)?)),
+            None => None,
+        };
+        if url.is_none() && file.is_none() {
+            anyhow::bail!("Missing url or torrent_file_base64");
+        }
+
+        let mut fields: Vec<(&str, String)> = Vec::new();
+        if let Some(u) = url {
+            fields.push(("urls", u.to_string()));
+        }
+        for (arg, field) in [
+            ("save_path", "savepath"),
+            ("category", "category"),
+            ("tags", "tags"),
+            ("rename", "rename"),
+        ] {
+            if let Some(v) = args.get(arg).and_then(|v| v.as_str()) {
+                fields.push((field, v.to_string()));
+            }
+        }
+        for (arg, field) in [
+            ("skip_checking", "skip_checking"),
+            ("sequential_download", "sequentialDownload"),
+            ("first_last_piece_prio", "firstLastPiecePrio"),
+            ("auto_tmm", "autoTMM"),
+        ] {
+            if let Some(v) = args.get(arg).and_then(|v| v.as_bool()) {
+                fields.push((field, v.to_string()));
+            }
+        }
+        if let Some(v) = args.get("paused").and_then(|v| v.as_bool()) {
+            // qBittorrent 5 reads "stopped", 4.x reads "paused".
+            fields.push(("stopped", v.to_string()));
+            fields.push(("paused", v.to_string()));
+        }
+        for (arg, field) in [
+            ("dl_limit", "dlLimit"),
+            ("up_limit", "upLimit"),
+            ("seeding_time_limit", "seedingTimeLimit"),
+        ] {
+            if let Some(v) = args.get(arg).and_then(|v| v.as_i64()) {
+                fields.push((field, v.to_string()));
+            }
+        }
+        if let Some(v) = args.get("ratio_limit").and_then(|v| v.as_f64()) {
+            fields.push(("ratioLimit", v.to_string()));
+        }
+
+        client.add_torrent_full(&fields, file).await?;
+        Ok(text_result("Torrent added successfully"))
     }
 
     async fn handle_delete_torrent(&self, client: &QBitClient, args: &Value) -> Result<Value> {
@@ -1627,52 +1786,83 @@ impl McpServer {
             .and_then(|v| v.as_str())
             .ok_or(anyhow::anyhow!("Missing hash"))?;
         let files = client.get_torrent_files(hash).await?;
-        let text = serde_json::to_string_pretty(&files)?;
+        let text = serde_json::to_string(&files)?;
         Ok(json!({ "content": [{ "type": "text", "text": text }] }))
     }
 
     async fn handle_inspect_torrent(&self, client: &QBitClient, args: &Value) -> Result<Value> {
-        let hash = args
-            .get("hash")
-            .and_then(|v| v.as_str())
-            .ok_or(anyhow::anyhow!("Missing hash"))?;
+        let hash = arg_str(args, "hash")?;
+        let flag = |k: &str| args.get(k).and_then(|v| v.as_bool()).unwrap_or(false);
 
-        let properties = client.get_torrent_properties(hash).await?;
-        let files = client.get_torrent_files(hash).await?;
-        let trackers = client.get_torrent_trackers(hash).await?;
-
-        let result = json!({
+        let (properties, files, trackers) = tokio::try_join!(
+            client.get_torrent_properties(hash),
+            client.get_torrent_files(hash),
+            client.get_torrent_trackers(hash),
+        )?;
+        let mut result = json!({
             "properties": properties,
             "files": files,
             "trackers": trackers
         });
+        if flag("include_peers") {
+            result["peers"] = client.get_torrent_peers(hash).await?;
+        }
+        if flag("include_webseeds") {
+            result["webseeds"] = client.get_torrent_webseeds(hash).await?;
+        }
+        if flag("include_pieces") {
+            let states = client.get_piece_states(hash).await?;
+            let count = |s: i64| states.iter().filter(|&&x| x == s).count();
+            result["pieces"] = json!({
+                "total": states.len(),
+                "not_downloaded": count(0),
+                "downloading": count(1),
+                "downloaded": count(2),
+            });
+        }
+        if flag("include_piece_hashes") {
+            result["piece_hashes"] = json!(client.get_piece_hashes(hash).await?);
+        }
 
-        Ok(
-            json!({ "content": [{ "type": "text", "text": serde_json::to_string_pretty(&result)? }] }),
-        )
+        Ok(text_result(serde_json::to_string(&result)?))
     }
 
     async fn handle_get_system_info(&self, client: &QBitClient) -> Result<Value> {
-        let transfer_info = client.get_global_transfer_info().await?;
-        let app_preferences = client.get_app_preferences().await?;
-        let app_version = client.get_app_version().await?;
-        let build_info = client.get_build_info().await?;
+        let (
+            transfer_info,
+            mut app_preferences,
+            app_version,
+            webapi_version,
+            build_info,
+            speed_mode,
+            default_save_path,
+        ) = tokio::try_join!(
+            client.get_global_transfer_info(),
+            client.get_app_preferences(),
+            client.get_app_version(),
+            client.get_webapi_version(),
+            client.get_build_info(),
+            client.get_speed_limits_mode(),
+            client.get_default_save_path(),
+        )?;
+        redact_preferences(&mut app_preferences);
 
         let result = json!({
             "transfer_info": transfer_info,
+            "alt_speed_limits_enabled": speed_mode == 1,
+            "default_save_path": default_save_path,
             "app_preferences": app_preferences,
             "app_version": app_version,
+            "webapi_version": webapi_version,
             "build_info": build_info
         });
 
-        Ok(
-            json!({ "content": [{ "type": "text", "text": serde_json::to_string_pretty(&result)? }] }),
-        )
+        Ok(text_result(serde_json::to_string(&result)?))
     }
 
     async fn handle_get_categories(&self, client: &QBitClient) -> Result<Value> {
         let categories = client.get_categories().await?;
-        let text = serde_json::to_string_pretty(&categories)?;
+        let text = serde_json::to_string(&categories)?;
         Ok(json!({ "content": [{ "type": "text", "text": text }] }))
     }
 
@@ -1721,86 +1911,90 @@ impl McpServer {
             .get("delete_files")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
+        let dry_run = args
+            .get("dry_run")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true);
+
+        if min_ratio.is_none() && max_age_days.is_none() {
+            anyhow::bail!(
+                "Give min_ratio and/or max_age_days; refusing to match every completed torrent"
+            );
+        }
+        if min_ratio.is_some_and(|r| r <= 0.0) || max_age_days.is_some_and(|d| d <= 0) {
+            anyhow::bail!("min_ratio and max_age_days must be greater than 0");
+        }
 
         let torrents = client
             .get_torrent_list(Some("completed"), None, None, None, None, None, None)
             .await?;
-
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)?
             .as_secs() as i64;
 
-        let to_delete: Vec<String> = torrents
+        // Every condition given must match.
+        let matches: Vec<_> = torrents
             .into_iter()
             .filter(|t| {
-                let mut should_delete = false;
-                if let Some(r) = min_ratio {
-                    should_delete = t.ratio >= r;
-                }
-                if let Some(age_days) = max_age_days {
-                    let age_secs = age_days * 24 * 3600;
-                    if t.completion_on > 0 && (now - t.completion_on) >= age_secs {
-                        should_delete = true;
-                    }
-                }
-                // If neither is specified, we don't delete anything automatically
-                // to avoid accidental wipes of all completed torrents.
-                // UNLESS the user explicitly wants to delete all completed.
-                // But let's require at least one condition for safety in this macro.
-                if min_ratio.is_none() && max_age_days.is_none() {
-                    return false;
-                }
-                should_delete
+                min_ratio.is_none_or(|r| t.ratio >= r)
+                    && max_age_days.is_none_or(|d| {
+                        t.completion_on > 0 && now - t.completion_on >= d * 24 * 3600
+                    })
             })
-            .map(|t| t.hash)
             .collect();
 
-        if to_delete.is_empty() {
-            return Ok(
-                json!({ "content": [{ "type": "text", "text": "No torrents matched the cleanup criteria." }] }),
-            );
+        if matches.is_empty() {
+            return Ok(text_result("No torrents matched the cleanup criteria."));
+        }
+        if dry_run {
+            let list: Vec<Value> = matches
+                .iter()
+                .map(|t| json!({ "hash": t.hash, "name": t.name, "ratio": t.ratio, "completion_on": t.completion_on }))
+                .collect();
+            return Ok(text_result(format!(
+                "Dry run: {} torrents would be removed (delete_files={}). Call again with dry_run=false to remove them.\n{}",
+                matches.len(),
+                delete_files,
+                serde_json::to_string(&list)?
+            )));
         }
 
-        let count = to_delete.len();
-        let hashes = to_delete.join("|");
-        client.delete_torrents(&hashes, delete_files).await?;
-
-        Ok(
-            json!({ "content": [{ "type": "text", "text": format!("Successfully cleaned up {} torrents.", count) }] }),
-        )
+        let hashes: Vec<&str> = matches.iter().map(|t| t.hash.as_str()).collect();
+        client
+            .delete_torrents(&hashes.join("|"), delete_files)
+            .await?;
+        Ok(text_result(format!(
+            "Successfully cleaned up {} torrents.",
+            hashes.len()
+        )))
     }
 
     async fn handle_mass_rename(&self, client: &QBitClient, args: &Value) -> Result<Value> {
-        let hash = args
-            .get("hash")
-            .and_then(|v| v.as_str())
-            .ok_or(anyhow::anyhow!("Missing hash"))?;
-        let pattern = args
-            .get("pattern")
-            .and_then(|v| v.as_str())
-            .ok_or(anyhow::anyhow!("Missing pattern"))?;
-        let replacement = args
-            .get("replacement")
-            .and_then(|v| v.as_str())
-            .ok_or(anyhow::anyhow!("Missing replacement"))?;
+        let hash = arg_str(args, "hash")?;
+        let pattern = arg_str(args, "pattern")?;
+        let replacement = arg_str(args, "replacement")?;
 
         let re = Regex::new(pattern)?;
         let files = client.get_torrent_files(hash).await?;
 
-        let mut rename_count = 0;
+        let mut renamed = 0;
+        let mut failed = Vec::new();
         for file in files {
-            if re.is_match(&file.name) {
-                let new_name = re.replace_all(&file.name, replacement).to_string();
-                if new_name != file.name {
-                    client.rename_file(hash, &file.name, &new_name).await?;
-                    rename_count += 1;
+            let new_name = re.replace_all(&file.name, replacement);
+            if new_name != file.name {
+                // Keep going on a failure so one bad file does not leave the rest half-done.
+                match client.rename_file(hash, &file.name, &new_name).await {
+                    Ok(()) => renamed += 1,
+                    Err(e) => failed.push(format!("{}: {}", file.name, e)),
                 }
             }
         }
 
-        Ok(
-            json!({ "content": [{ "type": "text", "text": format!("Successfully renamed {} files.", rename_count) }] }),
-        )
+        let mut text = format!("Successfully renamed {} files.", renamed);
+        if !failed.is_empty() {
+            text += &format!(" {} failed:\n{}", failed.len(), failed.join("\n"));
+        }
+        Ok(json!({ "content": [{ "type": "text", "text": text }], "isError": !failed.is_empty() }))
     }
 
     async fn handle_find_duplicates(&self, client: &QBitClient) -> Result<Value> {
@@ -1838,7 +2032,7 @@ impl McpServer {
             );
         }
 
-        let text = serde_json::to_string_pretty(&duplicates)?;
+        let text = serde_json::to_string(&duplicates)?;
         Ok(json!({ "content": [{ "type": "text", "text": text }] }))
     }
 
@@ -1977,7 +2171,7 @@ impl McpServer {
 
     async fn handle_get_search_plugins(&self, client: &QBitClient) -> Result<Value> {
         let plugins = client.get_search_plugins().await?;
-        let text = serde_json::to_string_pretty(&plugins)?;
+        let text = serde_json::to_string(&plugins)?;
         Ok(json!({ "content": [{ "type": "text", "text": text }] }))
     }
 
@@ -1996,7 +2190,7 @@ impl McpServer {
 
     async fn handle_get_rss_feeds(&self, client: &QBitClient) -> Result<Value> {
         let feeds = client.get_all_rss_feeds().await?;
-        let text = serde_json::to_string_pretty(&feeds)?;
+        let text = serde_json::to_string(&feeds)?;
         Ok(json!({ "content": [{ "type": "text", "text": text }] }))
     }
 
@@ -2015,7 +2209,7 @@ impl McpServer {
 
     async fn handle_get_rss_rules(&self, client: &QBitClient) -> Result<Value> {
         let rules = client.get_all_rss_rules().await?;
-        let text = serde_json::to_string_pretty(&rules)?;
+        let text = serde_json::to_string(&rules)?;
         Ok(json!({ "content": [{ "type": "text", "text": text }] }))
     }
 
@@ -2042,15 +2236,23 @@ impl McpServer {
     }
 
     async fn handle_set_app_preferences(&self, client: &QBitClient, args: &Value) -> Result<Value> {
-        let prefs_str = args
-            .get("preferences")
-            .and_then(|v| v.as_str())
-            .ok_or(anyhow::anyhow!("Missing preferences"))?;
-        let prefs_val: serde_json::Value = serde_json::from_str(prefs_str)?;
-        client.set_app_preferences(&prefs_val).await?;
-        Ok(
-            json!({ "content": [{ "type": "text", "text": "App preferences updated successfully" }] }),
-        )
+        let prefs: Value = serde_json::from_str(arg_str(args, "preferences")?)?;
+        let obj = prefs
+            .as_object()
+            .ok_or_else(|| anyhow::anyhow!("preferences must be a JSON object"))?;
+        let blocked: Vec<&str> = obj
+            .keys()
+            .map(|k| k.as_str())
+            .filter(|k| is_blocked_preference(k))
+            .collect();
+        if !blocked.is_empty() {
+            anyhow::bail!(
+                "Refused: these preferences can only be changed in the qBittorrent Web UI: {}",
+                blocked.join(", ")
+            );
+        }
+        client.set_app_preferences(&prefs).await?;
+        Ok(text_result("App preferences updated successfully"))
     }
 
     async fn handle_get_main_log(&self, client: &QBitClient, args: &Value) -> Result<Value> {
@@ -2068,15 +2270,102 @@ impl McpServer {
         let logs = client
             .get_main_log(normal, info, warning, critical, last_id)
             .await?;
-        let text = serde_json::to_string_pretty(&logs)?;
+        let text = serde_json::to_string(&logs)?;
         Ok(json!({ "content": [{ "type": "text", "text": text }] }))
     }
 
     async fn handle_get_peer_log(&self, client: &QBitClient, args: &Value) -> Result<Value> {
         let last_id = args.get("last_id").and_then(|v| v.as_i64());
         let logs = client.get_peer_log(last_id).await?;
-        let text = serde_json::to_string_pretty(&logs)?;
+        let text = serde_json::to_string(&logs)?;
         Ok(json!({ "content": [{ "type": "text", "text": text }] }))
+    }
+
+    async fn handle_manage_categories(&self, client: &QBitClient, args: &Value) -> Result<Value> {
+        let name = arg_str(args, "name")?;
+        let save_path = args.get("save_path").and_then(|v| v.as_str()).unwrap_or("");
+        match arg_str(args, "action")? {
+            "create" => client.create_category(name, save_path).await?,
+            "edit" => client.edit_category(name, save_path).await?,
+            "remove" => client.remove_categories(name).await?,
+            other => anyhow::bail!("Unsupported action: {}", other),
+        }
+        Ok(text_result("Categories updated successfully"))
+    }
+
+    async fn handle_manage_tags(&self, client: &QBitClient, args: &Value) -> Result<Value> {
+        match arg_str(args, "action")? {
+            "list" => {
+                return Ok(text_result(serde_json::to_string(
+                    &client.get_tags().await?,
+                )?));
+            }
+            "create" => client.create_tags(arg_str(args, "tags")?).await?,
+            "delete" => client.delete_tags(arg_str(args, "tags")?).await?,
+            other => anyhow::bail!("Unsupported action: {}", other),
+        }
+        Ok(text_result("Tags updated successfully"))
+    }
+
+    async fn handle_set_global_speed_limits(
+        &self,
+        client: &QBitClient,
+        args: &Value,
+    ) -> Result<Value> {
+        if let Some(limit) = args.get("dl_limit").and_then(|v| v.as_i64()) {
+            client.set_download_limit(limit).await?;
+        }
+        if let Some(limit) = args.get("up_limit").and_then(|v| v.as_i64()) {
+            client.set_upload_limit(limit).await?;
+        }
+        // The API only toggles, so read the mode first to make the call idempotent.
+        if let Some(want) = args.get("alt_speed_enabled").and_then(|v| v.as_bool())
+            && (client.get_speed_limits_mode().await? == 1) != want
+        {
+            client.toggle_alternative_speed_limits().await?;
+        }
+        Ok(text_result("Global speed limits updated successfully"))
+    }
+
+    async fn handle_manage_rss(&self, client: &QBitClient, args: &Value) -> Result<Value> {
+        match arg_str(args, "action")? {
+            "remove_item" => client.remove_rss_item(arg_str(args, "path")?).await?,
+            "add_folder" => client.add_rss_folder(arg_str(args, "path")?).await?,
+            "mark_as_read" => {
+                let article = args.get("article_id").and_then(|v| v.as_str());
+                client
+                    .mark_rss_as_read(arg_str(args, "path")?, article)
+                    .await?
+            }
+            "refresh_item" => client.refresh_rss_item(arg_str(args, "path")?).await?,
+            "remove_rule" => client.remove_rss_rule(arg_str(args, "rule_name")?).await?,
+            "rename_rule" => {
+                client
+                    .rename_rss_rule(arg_str(args, "rule_name")?, arg_str(args, "new_rule_name")?)
+                    .await?
+            }
+            "matching_articles" => {
+                let articles = client
+                    .get_rss_matching_articles(arg_str(args, "rule_name")?)
+                    .await?;
+                return Ok(text_result(serde_json::to_string(&articles)?));
+            }
+            other => anyhow::bail!("Unsupported action: {}", other),
+        }
+        Ok(text_result("RSS updated successfully"))
+    }
+
+    async fn handle_manage_cookies(&self, client: &QBitClient, args: &Value) -> Result<Value> {
+        match arg_str(args, "action")? {
+            "get" => Ok(text_result(serde_json::to_string(
+                &client.get_cookies().await?,
+            )?)),
+            "set" => {
+                client.set_cookies(arg_str(args, "cookies")?).await?;
+                Ok(text_result("Cookies updated successfully"))
+            }
+            other => anyhow::bail!("Unsupported action: {}", other),
+        }
     }
 
     async fn handle_shutdown_app(&self, client: &QBitClient) -> Result<Value> {
@@ -2092,89 +2381,92 @@ impl McpServer {
     }
 
     async fn event_loop(&self, interval_ms: u64) {
-        let mut last_rids: HashMap<String, i64> = HashMap::new();
-        let mut notified_finished: HashMap<String, std::collections::HashSet<String>> =
-            HashMap::new();
-        let mut was_connected: HashMap<String, bool> = HashMap::new();
-
-        for name in self.clients.keys() {
-            last_rids.insert(name.clone(), 0);
-            notified_finished.insert(name.clone(), std::collections::HashSet::new());
-            was_connected.insert(name.clone(), false);
+        struct InstanceState {
+            rid: i64,
+            connected: bool,
+            seeded: bool,
+            notified: std::collections::HashSet<String>,
+            failures: u32,
+            next_poll: tokio::time::Instant,
         }
+        let mut states: HashMap<&String, InstanceState> = self
+            .clients
+            .keys()
+            .map(|name| {
+                (
+                    name,
+                    InstanceState {
+                        rid: 0,
+                        connected: false,
+                        seeded: false,
+                        notified: Default::default(),
+                        failures: 0,
+                        next_poll: tokio::time::Instant::now(),
+                    },
+                )
+            })
+            .collect();
 
-        loop {
-            if !self.is_running() {
-                break;
-            }
-            tokio::task::yield_now().await;
+        while self.is_running() {
             sleep(Duration::from_millis(interval_ms)).await;
             for (name, client) in &self.clients {
+                let st = states.get_mut(name).unwrap();
                 if !self.is_running() {
                     break;
                 }
-                let rid = *last_rids.get(name).unwrap_or(&0);
-                match client.get_main_data(rid).await {
+                if tokio::time::Instant::now() < st.next_poll {
+                    continue;
+                }
+                match client.get_main_data(st.rid).await {
                     Ok(data) => {
-                        if !*was_connected.get(name).unwrap_or(&false) {
+                        if !st.connected {
                             info!("Connected to qBittorrent instance '{}'", name);
-                            was_connected.insert(name.clone(), true);
+                            st.connected = true;
                         }
-                        last_rids.insert(name.clone(), data.rid);
+                        st.failures = 0;
+                        st.rid = data.rid;
 
-                        // Track finished torrents to notify only once
-                        if let Some(torrents) = data.torrents {
-                            for (hash, torrent_val) in torrents {
-                                let progress = torrent_val.get("progress").and_then(|p| p.as_f64());
-                                let state = torrent_val.get("state").and_then(|s| s.as_str());
-
-                                // "uploading", "stalledUP", "queuedUP", "forcedUP" usually mean finished downloading
-                                let is_finished_state = state.is_some_and(|s| {
-                                    s == "uploading"
-                                        || s == "stalledUP"
-                                        || s == "queuedUP"
-                                        || s == "forcedUP"
+                        let Some(torrents) = data.torrents else {
+                            continue;
+                        };
+                        for (hash, t) in torrents {
+                            let progress = t.get("progress").and_then(|p| p.as_f64());
+                            let state = t.get("state").and_then(|s| s.as_str());
+                            let finished = progress.is_some_and(|p| p >= 1.0)
+                                || state.is_some_and(|s| {
+                                    matches!(s, "uploading" | "stalledUP" | "queuedUP" | "forcedUP")
                                 });
-
-                                if progress.is_some_and(|p| p >= 1.0) || is_finished_state {
-                                    let already_notified =
-                                        notified_finished.get_mut(name).unwrap().contains(&hash);
-                                    if !already_notified {
-                                        let torrent_name = torrent_val
-                                            .get("name")
-                                            .and_then(|n| n.as_str())
-                                            .unwrap_or(&hash);
-                                        info!(
-                                            "Notification: Torrent '{}' finished on {}",
-                                            torrent_name, name
-                                        );
-
-                                        // Standard resource update notification
-                                        self.push_notification(
-                                            "notifications/resources/updated",
-                                            json!({ "uri": format!("qbittorrent://{}/torrents", name) }),
-                                        );
-
-                                        notified_finished
-                                            .get_mut(name)
-                                            .unwrap()
-                                            .insert(hash.clone());
-                                    }
-                                }
+                            if !finished || st.notified.contains(&hash) {
+                                continue;
                             }
+                            // The first poll only records torrents that were already finished.
+                            if st.seeded {
+                                let torrent_name =
+                                    t.get("name").and_then(|n| n.as_str()).unwrap_or(&hash);
+                                info!(
+                                    "Notification: Torrent '{}' finished on {}",
+                                    torrent_name, name
+                                );
+                                self.push_notification(
+                                    "notifications/resources/updated",
+                                    json!({ "uri": format!("qbittorrent://{}/torrents", name) }),
+                                );
+                            }
+                            st.notified.insert(hash);
                         }
+                        st.seeded = true;
                     }
                     Err(e) => {
-                        if self.is_running() {
-                            if *was_connected.get(name).unwrap_or(&false) {
-                                error!("Lost connection to qBittorrent instance '{}': {}", name, e);
-                                was_connected.insert(name.clone(), false);
-                                last_rids.insert(name.clone(), 0);
-                            }
-                            if client.has_credentials() && client.login().await.is_ok() {
-                                info!("Re-authenticated to qBittorrent instance '{}'", name)
-                            }
+                        if st.connected {
+                            error!("Lost connection to qBittorrent instance '{}': {}", name, e);
+                            st.connected = false;
+                            st.rid = 0;
                         }
+                        // Back off 2s, 4s, 8s ... up to 5 minutes so a bad password does not get the IP banned.
+                        st.failures = st.failures.saturating_add(1);
+                        let delay = 2u64.saturating_pow(st.failures.min(9)).min(300);
+                        debug!("Polling '{}' failed ({}); next try in {}s", name, e, delay);
+                        st.next_poll = tokio::time::Instant::now() + Duration::from_secs(delay);
                     }
                 }
             }
@@ -2303,6 +2595,14 @@ mod tests {
             ("get_peer_log", json!({})),
             ("get_system_info", json!({})),
             ("shutdown_app", json!({})),
+            (
+                "manage_categories",
+                json!({ "action": "create", "name": "c" }),
+            ),
+            ("manage_tags", json!({ "action": "list" })),
+            ("set_global_speed_limits", json!({ "dl_limit": 0 })),
+            ("manage_rss", json!({ "action": "add_folder", "path": "f" })),
+            ("manage_cookies", json!({ "action": "get" })),
         ];
 
         for (name, args) in tools_to_test {
@@ -2379,6 +2679,69 @@ mod tests {
         let state = server.state.lock().unwrap();
         assert_eq!(state.notification_queue.len(), 1);
         assert_eq!(state.notification_queue[0]["method"], "test_method");
+    }
+
+    #[test]
+    fn test_decode_base64() {
+        assert_eq!(decode_base64("aGVsbG8=").unwrap(), b"hello");
+        assert_eq!(decode_base64("aGVsbG8").unwrap(), b"hello");
+        assert_eq!(decode_base64("+/8=").unwrap(), vec![0xfb, 0xff]);
+        assert!(decode_base64("a*b").is_err());
+    }
+
+    #[test]
+    fn test_preference_filters() {
+        assert!(is_blocked_preference("autorun_program"));
+        assert!(is_blocked_preference("web_ui_password"));
+        assert!(is_blocked_preference("bypass_auth_subnet_whitelist"));
+        assert!(is_blocked_preference("proxy_password"));
+        assert!(!is_blocked_preference("dl_limit"));
+        assert!(!is_blocked_preference("save_path"));
+
+        let mut prefs = json!({ "proxy_password": "x", "mail_notification_password": "y", "dyndns_password": "z", "save_path": "/d" });
+        redact_preferences(&mut prefs);
+        assert_eq!(prefs, json!({ "save_path": "/d" }));
+    }
+
+    #[tokio::test]
+    async fn test_rpc_error_codes() {
+        let server = McpServer::new(HashMap::new(), false);
+        let req = |method: &str, params: Option<Value>| JsonRpcRequest {
+            jsonrpc: "2.0".into(),
+            method: method.into(),
+            params,
+            id: Some(json!(1)),
+        };
+        let code = |r: Option<JsonRpcResponse>| r.unwrap().error.unwrap().code;
+        assert_eq!(code(server.handle_rpc(req("nope", None)).await), -32601);
+        assert_eq!(
+            code(server.handle_rpc(req("tools/call", None)).await),
+            -32602
+        );
+
+        let mut clients = HashMap::new();
+        clients.insert(
+            "default".into(),
+            QBitClient::new_no_auth("http://127.0.0.1:1", false),
+        );
+        let server = McpServer::new(clients, false);
+        let unknown = server
+            .handle_rpc(req(
+                "tools/call",
+                Some(json!({ "name": "nope", "arguments": {} })),
+            ))
+            .await;
+        assert_eq!(code(unknown), -32602);
+        // A failing tool is a result with isError, not a protocol error.
+        let failed = server
+            .handle_rpc(req(
+                "tools/call",
+                Some(json!({ "name": "get_categories", "arguments": {} })),
+            ))
+            .await
+            .unwrap();
+        assert!(failed.error.is_none());
+        assert_eq!(failed.result.unwrap()["isError"], true);
     }
 
     #[tokio::test]
@@ -2521,6 +2884,14 @@ mod tests {
             "toggle_first_last_prio",
             "set_force_start",
             "set_super_seeding",
+            "set_location",
+            "rename",
+            "set_auto_management",
+            "top_prio",
+            "bottom_prio",
+            "increase_prio",
+            "decrease_prio",
+            "add_peers",
         ];
 
         for action in actions {
@@ -2538,6 +2909,9 @@ mod tests {
                         "ratio_limit": 1.0,
                         "seeding_time_limit": 60,
                         "value": true,
+                        "location": "/x",
+                        "name": "n",
+                        "peers": "1.1.1.1:1",
                     }
                 })),
                 id: Some(json!(1)),

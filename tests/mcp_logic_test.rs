@@ -123,7 +123,8 @@ async fn test_handle_cleanup_completed_ratio() {
             "name": "cleanup_completed",
             "arguments": {
                 "min_ratio": 2.0,
-                "delete_files": false
+                "delete_files": false,
+                "dry_run": false
             }
         })),
         id: Some(json!(1)),
@@ -156,9 +157,50 @@ async fn test_handle_cleanup_completed_none() {
         id: Some(json!(1)),
     };
 
-    let resp = server.handle_request(req).await.unwrap();
+    // With no condition the tool refuses instead of matching every completed torrent.
+    assert!(server.handle_request(req).await.is_err());
+}
+
+#[tokio::test]
+async fn test_handle_cleanup_completed_dry_run_default() {
+    let (mock_server, server) = setup_mock_server().await;
+    let mock_torrents = r#"[
+        {"hash": "h1", "name": "T1", "size": 1024, "progress": 1.0, "dlspeed": 0, "upspeed": 0, "priority": 0, "num_seeds": 1, "num_leechs": 0, "num_incomplete": 0, "num_complete": 1, "ratio": 2.5, "eta": 0, "state": "uploading", "added_on": 100, "completion_on": 200, "seq_dl": false, "f_l_piece_prio": false, "category": "", "tags": "", "super_seeding": false, "force_start": false}
+    ]"#;
+    Mock::given(method("GET"))
+        .and(path("/api/v2/torrents/info"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(mock_torrents))
+        .mount(&mock_server)
+        .await;
+    // No delete mock: a dry run must not call delete.
+    Mock::given(method("POST"))
+        .and(path("/api/v2/torrents/delete"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(0)
+        .mount(&mock_server)
+        .await;
+
+    let call = |args: serde_json::Value| JsonRpcRequest {
+        jsonrpc: "2.0".to_string(),
+        method: "tools/call".to_string(),
+        params: Some(json!({ "name": "cleanup_completed", "arguments": args })),
+        id: Some(json!(1)),
+    };
+    let resp = server
+        .handle_request(call(json!({ "min_ratio": 2.0, "delete_files": true })))
+        .await
+        .unwrap();
     let text = resp["content"][0]["text"].as_str().unwrap();
-    assert!(text.contains("No torrents matched the cleanup criteria"));
+    assert!(text.starts_with("Dry run: 1 torrents"), "{}", text);
+    assert!(text.contains("\"T1\""));
+
+    // Zero or negative limits would match everything.
+    assert!(
+        server
+            .handle_request(call(json!({ "max_age_days": 0, "delete_files": false })))
+            .await
+            .is_err()
+    );
 }
 
 #[tokio::test]
@@ -230,8 +272,8 @@ async fn test_handle_find_duplicates() {
 
     let resp = server.handle_request(req).await.unwrap();
     let text = resp["content"][0]["text"].as_str().unwrap();
-    assert!(text.contains("\"name\": \"Ubuntu\""));
-    assert!(text.contains("\"count\": 2"));
+    assert!(text.contains("\"name\":\"Ubuntu\""));
+    assert!(text.contains("\"count\":2"));
 }
 
 #[tokio::test]
@@ -344,7 +386,8 @@ async fn test_handle_cleanup_completed_with_age() {
             "name": "cleanup_completed",
             "arguments": {
                 "max_age_days": 5,
-                "delete_files": true
+                "delete_files": true,
+                "dry_run": false
             }
         })),
         id: Some(json!(1)),

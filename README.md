@@ -31,7 +31,7 @@ A [Model Context Protocol (MCP) server](https://modelcontextprotocol.io/docs/get
 - **:bulb: Troubleshooting Prompts**: Consolidated `troubleshoot_torrent` prompt for guided workflows.
 - **:sleeping: Lazy Mode**: Reduce token usage by hiding advanced tools until explicitly requested.
 - **:gear: Configuration**: TOML, YAML, JSON, or Environment Variables.
-- **:rocket: Transports**: Stdio (default) and HTTP (SSE with optional token auth).
+- **:rocket: Transports**: Stdio (default) and HTTP (SSE and Streamable HTTP, bearer-token auth required).
 - **:books: Resources**: Scoped resources for all instances (e.g., `qbittorrent://seedbox/torrents`).
 
 ## :hammer_and_wrench: Available Tools
@@ -39,7 +39,7 @@ A [Model Context Protocol (MCP) server](https://modelcontextprotocol.io/docs/get
 The server exposes the following tools to the LLM, categorized by functionality:
 
 ### :globe_with_meridians: Search
-- `search_torrents`: Search for torrents using qBittorrent's search engine (waits 5 seconds for results).
+- `search_torrents`: Search for torrents using qBittorrent's search engine. Waits up to `wait_seconds` (default 5), returns at most `limit` results (default 25), then removes the search job.
 - `install_search_plugin`: Install a new search plugin (URL).
 - `uninstall_search_plugin`: Uninstall a search plugin (Name).
 - `enable_search_plugin`: Enable/Disable a search plugin.
@@ -47,11 +47,11 @@ The server exposes the following tools to the LLM, categorized by functionality:
 - `get_search_plugins`: List installed search plugins.
 
 ### :card_file_box: Torrent Management
-- `list_torrents`: List all torrents with their status and progress. Supports filtering, sorting, and optional inclusion of `properties` or `files`.
-- `manage_torrents`: Unified tool for multiple torrent actions: `pause`, `resume`, `reannounce`, `recheck`, `set_category`, `add_tags`, `remove_tags`, `set_share_limits`, `set_speed_limits`, `toggle_sequential`, `toggle_first_last_prio`, `set_force_start`, `set_super_seeding`.
-- `add_torrent`: Add a new torrent via Magnet URI or HTTP URL.
+- `list_torrents`: List torrents with their status and progress. Supports filtering, sorting, and optional inclusion of `properties` or `files`. Listings return 50 torrents unless `limit` is set; `stats_only` and `group_by_*` always cover all torrents.
+- `manage_torrents`: Unified tool for multiple torrent actions: `pause`, `resume`, `reannounce`, `recheck`, `set_category`, `add_tags`, `remove_tags`, `set_share_limits`, `set_speed_limits`, `toggle_sequential`, `toggle_first_last_prio`, `set_force_start`, `set_super_seeding`, `set_location` (move data), `rename`, `set_auto_management`, `top_prio`, `bottom_prio`, `increase_prio`, `decrease_prio`, `add_peers`.
+- `add_torrent`: Add torrents via Magnet URI / HTTP URL or a base64 `.torrent` file, with tags, rename, paused, skip checking, sequential, limits and more.
 - `delete_torrent`: Delete one or more torrents, optionally deleting downloaded files.
-- `cleanup_completed`: Remove completed torrents based on minimum ratio or maximum age (days).
+- `cleanup_completed`: Remove completed torrents by minimum ratio and/or age (days). Dry run by default: lists matches until called with `dry_run: false`.
 - `mass_rename`: Rename multiple files in a torrent using a Regex pattern and replacement string.
 - `find_duplicates`: Group and list torrents with identical names.
 - `add_trackers`: Add trackers to torrents.
@@ -61,15 +61,19 @@ The server exposes the following tools to the LLM, categorized by functionality:
 - `set_file_priority`: Set priority for files in a torrent.
 
 ### :mag: Torrent Inspection
-- `inspect_torrent`: Comprehensive inspection of a torrent (properties, files, and trackers in one call).
+- `inspect_torrent`: Comprehensive inspection of a torrent (properties, files, and trackers in one call; optional peers, web seeds, piece states and piece hashes).
 - `get_torrent_files`: List all files inside a specific torrent.
 
 ### :traffic_light: Global Control
 - `ban_peers`: Ban a list of peers (host:port, pipe-separated).
-- `set_app_preferences`: Update application preferences using a JSON string.
+- `set_global_speed_limits`: Set global download/upload limits and turn alternative speed limits on or off.
+- `set_app_preferences`: Update application preferences using a JSON string. Keys that run programs (`autorun_*`), control Web UI access (`web_ui_*`, `bypass_*`) or hold passwords are refused.
+- `manage_cookies`: Get or set cookies used when downloading `.torrent` files from URLs.
 
 ### :label: Categories & Tags
 - `get_categories`: List all available categories.
+- `manage_categories`: Create, edit (save path) or remove categories.
+- `manage_tags`: List, create or delete tags.
 
 ### :wireless: RSS Management
 - `add_rss_feed`: Add a new RSS feed.
@@ -77,6 +81,7 @@ The server exposes the following tools to the LLM, categorized by functionality:
 - `set_rss_rule`: Create or update an RSS auto-download rule.
 - `get_rss_rules`: List all RSS auto-download rules.
 - `move_rss_item`: Move an RSS item (feed or folder).
+- `manage_rss`: Remove a feed/folder, add a folder, mark as read, refresh, remove or rename a rule, list a rule's matching articles.
 
 ### :toolbox: Utility Tools
 - `wait_for_torrent_status`: Poll a torrent until it reaches a desired state (e.g., "uploading") or timeout. Useful for sequential automation without constant polling from the agent.
@@ -86,7 +91,7 @@ The server exposes the following tools to the LLM, categorized by functionality:
 - `get_peer_log`: Retrieve the peer connection log.
 
 ### :desktop_computer: System Tools
-- `get_system_info`: Comprehensive system information (transfer speeds, preferences, version, and build info in one call).
+- `get_system_info`: Comprehensive system information (transfer speeds and limits, alternative speed mode, default save path, preferences with secrets removed, app and Web API version, build info).
 - `shutdown_app`: Shutdown the qBittorrent application.
 - `show_all_tools`: Enable all available tools when running in `--lazy` mode.
 
@@ -137,7 +142,9 @@ server_mode = "stdio"          # or "http"
 lazy_mode = false              # or true to hide complex tools initially
 no_verify_ssl = false          # or true to disable SSL verification
 polling_interval_ms = 2000     # Optional. Interval for proactive notifications (default: 2000ms)
-# http_auth_token = "secret"   # Optional token for HTTP mode
+# http_auth_token = "secret"   # Required in HTTP mode
+# http_host = "0.0.0.0"        # HTTP listen address (default 0.0.0.0)
+# http_port = 3000             # HTTP listen port (default 3000)
 ```
 
 ### Environment Variables
@@ -146,7 +153,9 @@ Environment variables override configuration file settings. Use `_` (single unde
 
 - `QBITTORRENT_SERVER_MODE`: `stdio` or `http`
 - `QBITTORRENT_LAZY_MODE`: `true` or `false`
-- `QBITTORRENT_HTTP_AUTH_TOKEN`: Token for HTTP mode.
+- `QBITTORRENT_HTTP_AUTH_TOKEN`: Token for HTTP mode (required in HTTP mode).
+- `QBITTORRENT_HTTP_HOST`: HTTP listen address (default `0.0.0.0`).
+- `QBITTORRENT_HTTP_PORT`: HTTP listen port (default `3000`).
 - `QBITTORRENT_LOG_LEVEL`: `error`, `warn`, `info`, `debug`, `trace`.
 - `QBITTORRENT_POLLING_INTERVAL_MS`: Polling interval in milliseconds.
 
@@ -179,7 +188,9 @@ CLI arguments override configuration file settings.
 - `--server-mode <mode>`: `stdio` or `http`.
 - `--lazy`: Enable lazy mode (shows only essential tools initially to save tokens).
 - `--no-verify-ssl`: Disable SSL certificate verification (insecure).
-- `--http-auth-token <token>`: Authentication token for HTTP mode.
+- `--http-auth-token <token>`: Authentication token for HTTP mode (required in HTTP mode).
+- `--http-host <addr>`: HTTP listen address (default `0.0.0.0`).
+- `--http-port <port>`: HTTP listen port (default `3000`).
 - `--polling-interval-ms <ms>`: Polling interval for notifications (ms).
 - `--log-level <level>`: Log level (error, warn, info, debug, trace).
 - `--log-file-enable`: Enable logging to a file.
@@ -214,12 +225,28 @@ Add this to your `claude_desktop_config.json`:
 ### HTTP Mode
 
 ```bash
-./qbittorrent-mcp-rs --server-mode http
+./qbittorrent-mcp-rs --server-mode http --http-auth-token "$(openssl rand -hex 24)" --http-port 3000
 ```
 
-Server will listen on port 3000.
-- SSE Endpoint: `http://localhost:3000/sse`
-- Message Endpoint: `http://localhost:3000/message`
+HTTP mode refuses to start without a token. Clients must send `Authorization: Bearer <token>`; tokens in the URL are not accepted.
+
+- Streamable HTTP endpoint: `http://localhost:3000/mcp` (POST, JSON response)
+- SSE endpoint (2024-11-05 transport): `http://localhost:3000/sse`, with messages posted to `/message`. Finished-download notifications are pushed to SSE sessions.
+
+Example for a client that supports remote servers:
+
+```json
+{
+  "mcpServers": {
+    "qbittorrent": {
+      "url": "http://nas.local:3000/mcp",
+      "headers": { "Authorization": "Bearer <token>" }
+    }
+  }
+}
+```
+
+The Docker image runs as a non-root user (UID 65532). If you enable file logging into a mounted volume, make that folder writable for that user.
 
 ## :hammer_and_wrench: Development
 
@@ -271,6 +298,8 @@ The project uses [SOPS](https://github.com/getsops/sops) for encrypting sensitiv
 
 ### Connection & Authentication Issues
 
+- **Login failed: wrong username or password**: qBittorrent rejected the credentials. The server now says so at startup instead of failing later with 403 on every call.
+- **Login failed: 403 Forbidden**: qBittorrent banned this IP after too many failed logins. Restart qBittorrent or wait for the ban to expire. The server backs off polling (up to 5 minutes) after failures so it does not keep itself banned.
 - **401 Unauthorized**: Ensure your username and password are correct. If running qBittorrent 4.6.1+ or 5.x, ensure `WebUI\HostHeaderValidation=false` is set in your `qBittorrent.conf` if you are accessing it via a custom hostname or reverse proxy.
 - **CSRF Protection**: If you encounter 403 Forbidden errors during login, ensure `WebUI\CSRFProtection=false` is set in your configuration, or that the server's `Origin` and `Referer` headers (handled automatically by this server) match the expected host.
 - **Docker Networking**: If running the MCP server outside of Docker and qBittorrent inside, use the host's IP address or `localhost` (if ports are mapped). If both are in Docker, use the container name as the host.

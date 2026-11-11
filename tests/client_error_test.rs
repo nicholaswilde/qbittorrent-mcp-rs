@@ -13,9 +13,22 @@ async fn test_login_wrong_body() {
 
     let client = QBitClient::new(mock_server.uri(), "admin", "password", false);
     let result = client.login().await;
-    // We strictly check for "Ok." so this should return Ok(()) but it's technically ambiguous in my current implementation.
-    // Let's see what the current code does.
-    assert!(result.is_ok());
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_login_wrong_password_body() {
+    // qBittorrent answers a wrong password with 200 "Fails.", not an error status.
+    let mock_server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/api/v2/auth/login"))
+        .respond_with(ResponseTemplate::new(200).set_body_string("Fails."))
+        .mount(&mock_server)
+        .await;
+
+    let client = QBitClient::new(mock_server.uri(), "admin", "wrong", false);
+    let err = client.login().await.unwrap_err().to_string();
+    assert!(err.contains("wrong username or password"), "{}", err);
 }
 
 #[tokio::test]

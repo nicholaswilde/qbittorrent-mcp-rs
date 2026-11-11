@@ -20,6 +20,12 @@ pub async fn run_app(
         config.server_mode, config.lazy_mode
     );
 
+    if config.server_mode == "http" && config.http_auth_token.as_deref().is_none_or(str::is_empty) {
+        anyhow::bail!(
+            "HTTP mode requires an auth token (QBITTORRENT_HTTP_AUTH_TOKEN or --http-auth-token); without one anyone on the network can control qBittorrent"
+        );
+    }
+
     let instances = config.get_instances();
     let mut clients = HashMap::new();
 
@@ -27,16 +33,7 @@ pub async fn run_app(
         if inst.host.trim().is_empty() {
             continue;
         }
-        let base_url = if inst.host.starts_with("http://") || inst.host.starts_with("https://") {
-            if let Some(port) = inst.port {
-                format!("{}:{}", inst.host, port)
-            } else {
-                inst.host.clone()
-            }
-        } else {
-            let port = inst.port.unwrap_or(80);
-            format!("http://{}:{}", inst.host, port)
-        };
+        let base_url = build_base_url(&inst.host, inst.port)?;
 
         let no_verify_ssl =
             inst.no_verify_ssl.unwrap_or(config.no_verify_ssl) && base_url.starts_with("https://");
@@ -76,38 +73,59 @@ pub async fn run_app(
 
     let server_clone = server.clone();
     let mut server_handle = match config.server_mode.as_str() {
-        "http" => {
-            // Hardcoded port 3000 for now as it was in the original main.rs
-            tokio::spawn(async move {
-                let _ =
-                    run_http_server(server_clone, "0.0.0.0", 3000, config.http_auth_token).await;
-            })
-        }
+        "http" => tokio::spawn(async move {
+            run_http_server(
+                server_clone,
+                &config.http_host,
+                config.http_port,
+                config.http_auth_token,
+            )
+            .await
+        }),
         _ => tokio::spawn(async move {
             let mut server_mut = server_clone;
-            let _ = server_mut.run_stdio().await;
+            server_mut.run_stdio().await
         }),
     };
 
-    if let Some(rx) = shutdown_rx.take() {
+    let result = if let Some(rx) = shutdown_rx.take() {
         tokio::select! {
             _ = rx => {
                 info!("Shutdown signal received");
-                server.shutdown();
                 server_handle.abort();
+                Ok(())
             }
-            _ = &mut server_handle => {
-                info!("Server task finished");
-                server.shutdown();
-            }
+            res = &mut server_handle => res?,
         }
     } else {
-        server_handle.await?;
-        server.shutdown();
+        server_handle.await?
+    };
+    server.shutdown();
+    for client in clients.values().filter(|c| c.has_credentials()) {
+        let _ = client.logout().await;
     }
+    // A server that fails to start (e.g. port in use) must exit non-zero with the reason.
+    result?;
 
     info!("Shutting down qBittorrent MCP Server");
     Ok(())
+}
+
+/// Builds the Web UI URL; a port already in the host URL wins over `port`.
+fn build_base_url(host: &str, port: Option<u16>) -> anyhow::Result<String> {
+    let with_scheme = if host.starts_with("http://") || host.starts_with("https://") {
+        host.to_string()
+    } else {
+        format!("http://{}", host)
+    };
+    let mut url = url::Url::parse(&with_scheme)?;
+    if url.port().is_none()
+        && let Some(p) = port
+    {
+        url.set_port(Some(p))
+            .map_err(|_| anyhow::anyhow!("Cannot set port on {}", host))?;
+    }
+    Ok(url.as_str().trim_end_matches('/').to_string())
 }
 
 fn init_logging(config: &AppConfig) -> Option<WorkerGuard> {
@@ -155,4 +173,26 @@ fn init_logging(config: &AppConfig) -> Option<WorkerGuard> {
     }
 
     guard
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_base_url;
+
+    #[test]
+    fn base_url_does_not_double_the_port() {
+        assert_eq!(
+            build_base_url("http://h:9777", Some(8080)).unwrap(),
+            "http://h:9777"
+        );
+        assert_eq!(
+            build_base_url("http://h", Some(8080)).unwrap(),
+            "http://h:8080"
+        );
+        assert_eq!(build_base_url("h", None).unwrap(), "http://h");
+        assert_eq!(
+            build_base_url("https://h/qbt/", None).unwrap(),
+            "https://h/qbt"
+        );
+    }
 }
