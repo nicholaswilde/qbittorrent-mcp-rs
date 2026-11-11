@@ -1,6 +1,6 @@
 services:
   qbittorrent-mcp:
-    image: ghcr.io/nicholaswilde/qbittorrent-mcp-rs:latest
+    image: ghcr.io/millserd/qbittorrent-mcp-rs-full:latest
     container_name: qbittorrent-mcp
     restart: unless-stopped
     environment:
