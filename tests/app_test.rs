@@ -83,6 +83,8 @@ async fn test_run_app_no_instances_error() {
         log_rotate: "d".into(),
         http_auth_token: None,
         polling_interval_ms: 100,
+        http_host: "0.0.0.0".into(),
+        http_port: 3000,
     };
 
     let result = run_app(config, None).await;
@@ -128,9 +130,62 @@ async fn test_run_app_https_and_port() {
         log_rotate: "d".into(),
         http_auth_token: None,
         polling_interval_ms: 100,
+        http_host: "0.0.0.0".into(),
+        http_port: 3000,
     };
 
     let (tx, rx) = oneshot::channel();
     let _ = tx.send(());
     let _ = run_app(config, Some(rx)).await;
+}
+
+#[tokio::test]
+async fn test_run_app_http_requires_token() {
+    let config = AppConfig {
+        instances: None,
+        qbittorrent_host: "localhost".into(),
+        qbittorrent_port: None,
+        qbittorrent_username: None,
+        qbittorrent_password: None,
+        server_mode: "http".into(),
+        lazy_mode: false,
+        no_verify_ssl: false,
+        log_level: "info".into(),
+        log_file_enable: false,
+        log_dir: ".".into(),
+        log_filename: "f".into(),
+        log_rotate: "d".into(),
+        http_auth_token: None,
+        polling_interval_ms: 100,
+        http_host: "127.0.0.1".into(),
+        http_port: 0,
+    };
+    let err = run_app(config, None).await.unwrap_err().to_string();
+    assert!(err.contains("requires an auth token"), "{}", err);
+}
+
+#[tokio::test]
+async fn test_run_app_port_in_use_fails() {
+    let taken = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let config = AppConfig {
+        instances: None,
+        qbittorrent_host: "localhost".into(),
+        qbittorrent_port: None,
+        qbittorrent_username: None,
+        qbittorrent_password: None,
+        server_mode: "http".into(),
+        lazy_mode: false,
+        no_verify_ssl: false,
+        log_level: "info".into(),
+        log_file_enable: false,
+        log_dir: ".".into(),
+        log_filename: "f".into(),
+        log_rotate: "d".into(),
+        http_auth_token: Some("t".into()),
+        polling_interval_ms: 100,
+        http_host: "127.0.0.1".into(),
+        http_port: taken.local_addr().unwrap().port(),
+    };
+    let err = run_app(config, None).await.unwrap_err().to_string();
+    assert!(err.contains("Cannot listen on"), "{}", err);
 }

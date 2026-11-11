@@ -217,7 +217,7 @@ async fn test_generic_error_paths() {
         ("/api/v2/torrents/editTracker", "POST"),
         ("/api/v2/torrents/removeTrackers", "POST"),
         ("/api/v2/torrents/renameFolder", "POST"),
-        ("/api/v2/torrents/setFilePrio", "POST"),
+        ("/api/v2/torrents/filePrio", "POST"),
         ("/api/v2/torrents/removeCategories", "POST"),
         ("/api/v2/torrents/removeTags", "POST"),
         ("/api/v2/torrents/createTags", "POST"),

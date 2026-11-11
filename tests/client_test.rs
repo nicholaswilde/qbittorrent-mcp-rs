@@ -78,3 +78,49 @@ async fn test_get_torrents_info() {
     assert_eq!(torrents.len(), 1);
     assert_eq!(torrents[0].hash, "abc");
 }
+
+#[tokio::test]
+async fn test_expired_session_logs_in_again_and_retries() {
+    let mock_server = MockServer::start().await;
+    // First call: session expired (403). After login the retry succeeds.
+    Mock::given(method("GET"))
+        .and(path("/api/v2/torrents/categories"))
+        .respond_with(ResponseTemplate::new(403))
+        .up_to_n_times(1)
+        .mount(&mock_server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/api/v2/torrents/categories"))
+        .respond_with(ResponseTemplate::new(200).set_body_string("{}"))
+        .mount(&mock_server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/api/v2/auth/login"))
+        .respond_with(ResponseTemplate::new(200).set_body_string("Ok."))
+        .expect(1)
+        .mount(&mock_server)
+        .await;
+
+    let client = QBitClient::new(mock_server.uri(), "admin", "password", false);
+    assert!(client.get_categories().await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn test_hash_is_escaped_in_query() {
+    let mock_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/api/v2/torrents/files"))
+        .and(wiremock::matchers::query_param("hash", "abc&x=1"))
+        .respond_with(ResponseTemplate::new(200).set_body_string("[]"))
+        .mount(&mock_server)
+        .await;
+
+    let client = QBitClient::new_no_auth(mock_server.uri(), false);
+    assert!(
+        client
+            .get_torrent_files("abc&x=1")
+            .await
+            .unwrap()
+            .is_empty()
+    );
+}

@@ -18,6 +18,8 @@ fn test_config_instances_mapping() {
         log_rotate: "hourly".to_string(), // Trigger branch
         http_auth_token: None,
         polling_interval_ms: 2000,
+        http_host: "0.0.0.0".into(),
+        http_port: 3000,
     };
 
     let instances = config.get_instances();
@@ -72,6 +74,8 @@ fn test_config_instances_url_parsing() {
         log_rotate: "daily".to_string(),
         http_auth_token: None,
         polling_interval_ms: 2000,
+        http_host: "0.0.0.0".into(),
+        http_port: 3000,
     };
 
     let instances = config.get_instances();
@@ -96,6 +100,8 @@ fn test_config_various_log_rotations() {
         log_rotate: "never".to_string(), // Test 'never'
         http_auth_token: None,
         polling_interval_ms: 2000,
+        http_host: "0.0.0.0".into(),
+        http_port: 3000,
     };
 
     // We can't easily test init_logging directly as it calls .init() which can only be called once.
@@ -143,6 +149,8 @@ fn test_config_instances_complex_urls() {
         log_rotate: "daily".to_string(),
         http_auth_token: Some("secret".into()),
         polling_interval_ms: 500,
+        http_host: "0.0.0.0".into(),
+        http_port: 3000,
     };
 
     let instances = config.get_instances();
@@ -185,6 +193,8 @@ fn test_config_instances_mapping_various() {
         log_rotate: "d".into(),
         http_auth_token: None,
         polling_interval_ms: 100,
+        http_host: "0.0.0.0".into(),
+        http_port: 3000,
     };
 
     let instances = config.get_instances();

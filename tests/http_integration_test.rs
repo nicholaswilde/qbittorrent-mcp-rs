@@ -113,12 +113,12 @@ async fn test_http_auth_query_param() -> Result<()> {
     let (base_url, _handle) = setup_test_server(Some(token.clone())).await;
     let client = reqwest::Client::new();
 
-    // Authorized via query param
+    // Tokens in the URL leak into logs and history, so only the header is accepted.
     let resp = client
         .get(format!("{}/sse?token={}", base_url, token))
         .send()
         .await?;
-    assert_eq!(resp.status(), reqwest::StatusCode::OK);
+    assert_eq!(resp.status(), reqwest::StatusCode::UNAUTHORIZED);
 
     Ok(())
 }
@@ -241,7 +241,7 @@ async fn test_http_mcp_error_response() -> Result<()> {
 
     assert!(second_chunk_str.contains("event: message"));
     assert!(second_chunk_str.contains("\"error\":"));
-    assert!(second_chunk_str.contains("\"code\":-32603"));
+    assert!(second_chunk_str.contains("\"code\":-32602"));
 
     Ok(())
 }
@@ -340,5 +340,53 @@ async fn test_http_sse_notification() -> Result<()> {
     assert!(third_chunk_str.contains("event: message"));
     assert!(third_chunk_str.contains("notifications/tools/list_changed"));
 
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_streamable_http_endpoint() -> Result<()> {
+    let (base_url, _handle) = setup_test_server(Some("t".into())).await;
+    let client = reqwest::Client::new();
+    let ping = json!({ "jsonrpc": "2.0", "id": 7, "method": "ping" });
+
+    let resp = client
+        .post(format!("{}/mcp", base_url))
+        .json(&ping)
+        .send()
+        .await?;
+    assert_eq!(resp.status(), reqwest::StatusCode::UNAUTHORIZED);
+
+    let resp: serde_json::Value = client
+        .post(format!("{}/mcp", base_url))
+        .header("Authorization", "Bearer t")
+        .json(&ping)
+        .send()
+        .await?
+        .json()
+        .await?;
+    assert_eq!(resp["id"], 7);
+    assert_eq!(resp["result"], json!({}));
+
+    // Notifications get 202 and no body.
+    let resp = client
+        .post(format!("{}/mcp", base_url))
+        .header("Authorization", "Bearer t")
+        .json(&json!({ "jsonrpc": "2.0", "method": "notifications/initialized" }))
+        .send()
+        .await?;
+    assert_eq!(resp.status(), reqwest::StatusCode::ACCEPTED);
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_no_cors_headers() -> Result<()> {
+    let (base_url, _handle) = setup_test_server(None).await;
+    let resp = reqwest::Client::new()
+        .post(format!("{}/mcp", base_url))
+        .header("Origin", "https://evil.example")
+        .json(&json!({ "jsonrpc": "2.0", "id": 1, "method": "ping" }))
+        .send()
+        .await?;
+    assert!(resp.headers().get("access-control-allow-origin").is_none());
     Ok(())
 }

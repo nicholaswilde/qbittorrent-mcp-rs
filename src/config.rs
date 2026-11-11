@@ -30,6 +30,8 @@ pub struct AppConfig {
     pub http_auth_token: Option<String>,
     #[serde(default)]
     pub polling_interval_ms: u64,
+    pub http_host: String,
+    pub http_port: u16,
 }
 
 impl AppConfig {
@@ -72,7 +74,9 @@ impl AppConfig {
             .set_default("log_dir", ".")?
             .set_default("log_filename", "qbittorrent-mcp-rs.log")?
             .set_default("log_rotate", "daily")?
-            .set_default("polling_interval_ms", 2000)?;
+            .set_default("polling_interval_ms", 2000)?
+            .set_default("http_host", "0.0.0.0")?
+            .set_default("http_port", 3000)?;
 
         // 3. Load from File
         if let Some(path) = path_to_load {
@@ -81,13 +85,25 @@ impl AppConfig {
             builder = builder.add_source(File::with_name("config").required(false));
         }
 
-        // 4. Load from Environment Variables
+        // 4. Load from Environment Variables. No try_parsing: it would turn a password like
+        // "007123" into the number 7123; typed fields (ports, booleans) still convert from strings.
         builder = builder.add_source(
             Environment::with_prefix("QBITTORRENT")
                 .prefix_separator("_")
-                .separator("__")
-                .try_parsing(true),
+                .separator("__"),
         );
+
+        // The README's short names (QBITTORRENT_HOST, ...) strip to "host", which no field matches.
+        for (var, key) in [
+            ("QBITTORRENT_HOST", "qbittorrent_host"),
+            ("QBITTORRENT_PORT", "qbittorrent_port"),
+            ("QBITTORRENT_USERNAME", "qbittorrent_username"),
+            ("QBITTORRENT_PASSWORD", "qbittorrent_password"),
+        ] {
+            if let Ok(value) = std::env::var(var) {
+                builder = builder.set_override(key, value)?;
+            }
+        }
 
         // 5. Apply CLI overrides
         if let Some(host) = matches.get_one::<String>("qbittorrent_host") {
@@ -131,6 +147,12 @@ impl AppConfig {
         }
         if let Some(interval) = matches.get_one::<u64>("polling_interval_ms") {
             builder = builder.set_override("polling_interval_ms", *interval)?;
+        }
+        if let Some(host) = matches.get_one::<String>("http_host") {
+            builder = builder.set_override("http_host", host.as_str())?;
+        }
+        if let Some(port) = matches.get_one::<u16>("http_port") {
+            builder = builder.set_override("http_port", *port)?;
         }
 
         builder.build()?.try_deserialize()
@@ -189,8 +211,7 @@ fn parse_args(args: Vec<String>) -> ArgMatches {
             Arg::new("log_level")
                 .short('L')
                 .long("log-level")
-                .help("Log level (error, warn, info, debug, trace)")
-                .default_value("info"),
+                .help("Log level (error, warn, info, debug, trace)"),
         )
         .arg(
             Arg::new("log_file_enable")
@@ -201,25 +222,33 @@ fn parse_args(args: Vec<String>) -> ArgMatches {
         .arg(
             Arg::new("log_dir")
                 .long("log-dir")
-                .help("Log file directory")
-                .default_value("."),
+                .help("Log file directory"),
         )
         .arg(
             Arg::new("log_filename")
                 .long("log-filename")
-                .help("Log filename prefix")
-                .default_value("qbittorrent-mcp-rs.log"),
+                .help("Log filename prefix"),
         )
         .arg(
             Arg::new("log_rotate")
                 .long("log-rotate")
-                .help("Log rotation strategy (daily, hourly, never)")
-                .default_value("daily"),
+                .help("Log rotation strategy (daily, hourly, never)"),
         )
         .arg(
             Arg::new("http_auth_token")
                 .long("http-auth-token")
                 .help("Authentication token for HTTP server mode"),
+        )
+        .arg(
+            Arg::new("http_host")
+                .long("http-host")
+                .help("Address the HTTP server listens on (default 0.0.0.0)"),
+        )
+        .arg(
+            Arg::new("http_port")
+                .long("http-port")
+                .help("Port the HTTP server listens on (default 3000)")
+                .value_parser(clap::value_parser!(u16)),
         )
         .arg(
             Arg::new("polling_interval_ms")
@@ -257,6 +286,8 @@ mod tests {
             log_rotate: "daily".to_string(),
             http_auth_token: None,
             polling_interval_ms: 1000,
+            http_host: "0.0.0.0".to_string(),
+            http_port: 3000,
         };
 
         let instances = config.get_instances();
@@ -357,6 +388,8 @@ mod tests {
             log_rotate: "d".into(),
             http_auth_token: None,
             polling_interval_ms: 100,
+            http_host: "0.0.0.0".into(),
+            http_port: 3000,
         };
         let instances = config.get_instances();
         assert_eq!(instances.len(), 2);

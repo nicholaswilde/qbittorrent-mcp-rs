@@ -97,9 +97,9 @@ async fn test_file_folder_management() -> anyhow::Result<()> {
 
     client.rename_folder("hash1", "old", "new").await?;
 
-    // Mock setFilePrio
+    // Mock filePrio
     Mock::given(method("POST"))
-        .and(path("/api/v2/torrents/setFilePrio"))
+        .and(path("/api/v2/torrents/filePrio"))
         .respond_with(ResponseTemplate::new(200))
         .mount(&mock_server)
         .await;

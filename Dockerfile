@@ -17,7 +17,8 @@ COPY . .
 RUN cargo build --release --bin qbittorrent-mcp-rs
 
 # We do not need the Rust toolchain to run the binary!
-FROM gcr.io/distroless/cc-debian12 AS runtime
+# nonroot: the server needs no root rights
+FROM gcr.io/distroless/cc-debian12:nonroot AS runtime
 WORKDIR /app
 COPY --from=builder /app/target/release/qbittorrent-mcp-rs /app/qbittorrent-mcp-rs
 ENTRYPOINT ["/app/qbittorrent-mcp-rs"]
