@@ -2,6 +2,8 @@
 name = "qbittorrent-mcp-rs"
 version = "0.3.9"
 edition = "2024"
+authors = ["Nicholas Wilde <ncwilde43@gmail.com>"]
+description = "A Model Context Protocol (MCP) server for qBittorrent, written in Rust"
 
 [dependencies]
 anyhow = "1.0.100"
@@ -11,7 +13,13 @@ clap = { version = "4.5.54", features = ["derive"] }
 config = "0.15.19"
 dashmap = "6.1.0"
 futures = "0.3.31"
-reqwest = { version = "0.13.1", features = ["cookies", "form", "json", "multipart", "stream"] }
+reqwest = { version = "0.13.1", features = [
+  "cookies",
+  "form",
+  "json",
+  "multipart",
+  "stream",
+] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 tokio = { version = "1.49.0", features = ["full"] }
@@ -33,13 +41,38 @@ wiremock = "0.6.5"
 # Profile for CI/CD builds (inherits from dev)
 [profile.ci]
 inherits = "dev"
-incremental = false     # Disable incremental compilation for CI (often slower/buggy in CI cache)
-debug = 0               # No debug info needed for basic CI checks (speeds up build)
+incremental = false # Disable incremental compilation for CI (often slower/buggy in CI cache)
+debug = 0           # No debug info needed for basic CI checks (speeds up build)
 
 # Profile for final production releases (smaller, faster)
 [profile.release]
-opt-level = "z"         # Optimize for size
-lto = true              # Link Time Optimization (smaller binary)
-codegen-units = 1       # Reduce parallel code generation for better optimization
-panic = "abort"         # Remove stack unwinding (smaller binary)
-strip = true            # Strip symbols (smaller binary)
+opt-level = "z"   # Optimize for size
+lto = true        # Link Time Optimization (smaller binary)
+codegen-units = 1 # Reduce parallel code generation for better optimization
+panic = "abort"   # Remove stack unwinding (smaller binary)
+strip = true      # Strip symbols (smaller binary)
+
+[package.metadata.deb]
+maintainer = "Nicholas Wilde <ncwilde43@gmail.com>"
+copyright = "2026 Nicholas Wilde"
+license-file = ["LICENSE", "4"]
+extended-description = "A Model Context Protocol (MCP) server for qBittorrent, written in Rust."
+section = "utils"
+priority = "optional"
+assets = [
+  [
+    "target/release/qbittorrent-mcp-rs",
+    "usr/bin/",
+    "755",
+  ],
+  [
+    "README.md",
+    "usr/share/doc/qbittorrent-mcp-rs/README.md",
+    "644",
+  ],
+  [
+    "config.toml.example",
+    "usr/share/doc/qbittorrent-mcp-rs/config.toml.example",
+    "644",
+  ],
+]

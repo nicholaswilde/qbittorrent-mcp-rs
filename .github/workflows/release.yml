@@ -101,8 +101,7 @@ jobs:
         - build: linux-armv6
           os: ubuntu-latest
           rust: stable
-          target: arm-unknown-linux-gnueabihf
-          qemu: qemu-arm
+          target: arm-unknown-linux-musleabi
         - build: macos
           os: macos-latest
           rust: stable
@@ -206,6 +205,29 @@ jobs:
           echo "ASSET_SUM=$staging.tar.gz.sha256" >> $GITHUB_ENV
         fi
 
+    - name: Install cargo-deb
+      if: startsWith(matrix.build, 'linux')
+      shell: bash
+      run: |
+        CARGO_DEB_VER="3.8.0"
+        curl -LO "https://github.com/kornelski/cargo-deb/releases/download/v${CARGO_DEB_VER}/cargo-deb_${CARGO_DEB_VER}-1_amd64.deb"
+        sudo dpkg -i "cargo-deb_${CARGO_DEB_VER}-1_amd64.deb"
+        rm -f "cargo-deb_${CARGO_DEB_VER}-1_amd64.deb"
+
+    - name: Build Debian package
+      if: startsWith(matrix.build, 'linux')
+      shell: bash
+      run: |
+        cargo deb --no-build --target ${{ matrix.target }}
+
+    - name: Upload Debian package artifact
+      if: startsWith(matrix.build, 'linux')
+      uses: actions/upload-artifact@v4
+      with:
+        name: deb-${{ matrix.build }}
+        path: target/debian/*.deb
+        retention-days: 1
+
     - name: Upload release archive
       uses: softprops/action-gh-release@v2
       if: github.ref_type == 'tag'
@@ -213,4 +235,44 @@ jobs:
         files: |
           ${{ env.ASSET }}
           ${{ env.ASSET_SUM }}
+          target/debian/*.deb
         draft: true
+
+  publish-deb:
+    name: publish-deb
+    needs: ['create-release', 'build-release']
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Download all Debian packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: deb-*
+          merge-multiple: true
+          path: debs/
+
+      - name: Push .deb packages to nicholaswilde/apt
+        if: github.ref_type == 'tag'
+        env:
+          APT_REPO_TOKEN: ${{ secrets.APT_REPO_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Clone apt repo using PAT
+          git clone "https://x-access-token:${APT_REPO_TOKEN}@github.com/nicholaswilde/apt.git" apt-repo
+
+          # Copy all generated Debian packages into pool/main
+          cp debs/*.deb apt-repo/pool/main/
+
+          # Commit and push changes
+          cd apt-repo
+          git add pool/main/*.deb
+          if ! git diff --staged --quiet; then
+            git commit -m "feat(pkg): add qbittorrent-mcp-rs ${{ needs.create-release.outputs.version }} debs (amd64, arm64, armhf, armel)"
+            git push origin main
+          fi

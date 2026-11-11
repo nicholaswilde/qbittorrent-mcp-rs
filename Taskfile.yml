@@ -79,7 +79,7 @@ tasks:
   build:armv6:
     desc: Build for ARMv6
     cmds:
-      - cross build --release --target arm-unknown-linux-gnueabihf
+      - cross build --release --target arm-unknown-linux-musleabi
 
   build:local:
     desc: Build the project in release mode for the current architecture
