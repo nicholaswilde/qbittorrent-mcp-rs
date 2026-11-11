@@ -12,8 +12,22 @@ async fn test_login_wrong_body() {
         .await;
 
     let client = QBitClient::new(mock_server.uri(), "admin", "password", false);
-    let result = client.login().await;
-    assert!(result.is_err());
+    // Only "Fails." means bad credentials; other 2xx bodies are success.
+    assert!(client.login().await.is_ok());
+}
+
+#[tokio::test]
+async fn test_login_empty_body_is_success() {
+    // qBittorrent 5.3 answers a successful login with 200 and an empty body.
+    let mock_server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/api/v2/auth/login"))
+        .respond_with(ResponseTemplate::new(200))
+        .mount(&mock_server)
+        .await;
+
+    let client = QBitClient::new(mock_server.uri(), "admin", "password", false);
+    assert!(client.login().await.is_ok());
 }
 
 #[tokio::test]
