@@ -91,12 +91,13 @@ impl QBitClient {
                 "Login failed: 403 Forbidden (this IP is banned after too many failed logins; restart qBittorrent or wait for the ban to expire)"
             ));
         }
-        if !status.is_success() {
+        // qBittorrent 5.x answers a wrong username or password with 401.
+        if status != StatusCode::UNAUTHORIZED && !status.is_success() {
             return Err(anyhow!("Login failed with status: {}", status));
         }
-        // A wrong username or password still gets 2xx, with body "Fails.". Success is "Ok."
-        // on older versions and an empty body on newer ones (5.3), so only "Fails." is a failure.
-        if resp.text().await?.trim() == "Fails." {
+        // Older versions answer a wrong username or password with 2xx and body "Fails.". Success is
+        // "Ok." on older versions and an empty body on newer ones (5.3), so only "Fails." is a failure.
+        if status == StatusCode::UNAUTHORIZED || resp.text().await?.trim() == "Fails." {
             return Err(anyhow!("Login failed: wrong username or password"));
         }
         Ok(())
