@@ -46,6 +46,30 @@ async fn test_login_wrong_password_body() {
 }
 
 #[tokio::test]
+async fn test_relogin_failure_is_reported() {
+    // An expired session gets 403; if logging in again fails, the caller should see why.
+    let mock_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/api/v2/torrents/info"))
+        .respond_with(ResponseTemplate::new(403))
+        .mount(&mock_server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/api/v2/auth/login"))
+        .respond_with(ResponseTemplate::new(200).set_body_string("Fails."))
+        .mount(&mock_server)
+        .await;
+
+    let client = QBitClient::new(mock_server.uri(), "admin", "wrong", false);
+    let err = client
+        .get_torrent_list(None, None, None, None, None, None, None)
+        .await
+        .unwrap_err()
+        .to_string();
+    assert!(err.contains("wrong username or password"), "{}", err);
+}
+
+#[tokio::test]
 async fn test_get_torrent_list_error() {
     let mock_server = MockServer::start().await;
     Mock::given(method("GET"))

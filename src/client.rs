@@ -113,8 +113,9 @@ impl QBitClient {
         if resp.status() == StatusCode::FORBIDDEN
             && self.has_credentials()
             && let Some(retry) = retry
-            && self.login().await.is_ok()
         {
+            // Surface why re-login failed (wrong password, IP ban) instead of a bare 403.
+            self.login().await?;
             return Ok(retry.send().await?);
         }
         Ok(resp)
